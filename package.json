@@ -1,0 +1,16 @@
+{
+  "name": "kdp-analyzer-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Serveur proxy pour l'analyseur de niches KDP (abonnement) : IA Gemini avec pool de clés, licences Lemon Squeezy, quotas.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
