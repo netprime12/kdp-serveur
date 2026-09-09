@@ -2,7 +2,7 @@
 
 Ce petit serveur est le « cerveau » de la version abonnement :
 - il **fournit l'IA** à ta place (pool de clés Gemini, avec bascule automatique) ;
-- il **vérifie les licences** (Lemon Squeezy) ;
+- il **vérifie les licences** (Gumroad) ;
 - il gère **3 façons de payer une recherche**, dans cet ordre :
   1. le **quota mensuel** de l'abonnement (4,99 € = 60 recherches/mois),
   2. les **crédits** achetés en pack (non expirants),
@@ -75,10 +75,9 @@ Le plus simple : **Render** ou **Railway** (offres gratuites/peu chères).
 
 - [ ] `DEV_OPEN=false`
 - [ ] Clé(s) Gemini avec **facturation activée**
-- [ ] Offres créées dans Lemon Squeezy + IDs de variants renseignés :
-      `LEMON_VARIANT_ABO` (abonnement 4,99 €), et les packs de crédits
-      `LEMON_VARIANT_PACK10`, `LEMON_VARIANT_PACK30`, `LEMON_VARIANT_PACK100`
-      (produits « achat unique » qui délivrent une clé de licence)
+- [ ] Offres créées dans Gumroad (clés de licence activées) + IDs de produits :
+      `GUMROAD_PRODUCT_ABO` (abonnement), et les packs de crédits
+      `GUMROAD_PRODUCT_PACK10`, `GUMROAD_PRODUCT_PACK30`, `GUMROAD_PRODUCT_PACK100`
 - [ ] Restreindre le CORS à l'ID de ton extension (au lieu de tout ouvrir)
 - [ ] **Stockage persistant** : renseigne `UPSTASH_REDIS_REST_URL` et
       `UPSTASH_REDIS_REST_TOKEN` (base Redis gratuite sur upstash.com).
@@ -92,6 +91,6 @@ Le plus simple : **Render** ou **Railway** (offres gratuites/peu chères).
 
 - `server.js`  — routes et logique principale
 - `keypool.js` — pool de clés Gemini (rotation + secours)
-- `license.js` — vérification Lemon Squeezy (abonnement / packs de crédits)
+- `license.js` — vérification Gumroad (abonnement / packs de crédits)
 - `store.js`   — comptage : quota mensuel + essai annuel + solde de crédits (fichier JSON pour le MVP)
 - `.env.example` — configuration à copier en `.env`

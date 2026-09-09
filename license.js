@@ -1,120 +1,143 @@
 /* =========================================================================
-   Vérification des licences / packs via Lemon Squeezy (+ cache court).
+   Vérification des licences / packs via GUMROAD (+ cache court).
 
-   Reconnaissance de l'offre achetée : on lit le NOM du produit/variante
-   renvoyé par Lemon Squeezy (pas besoin de chercher des ID numériques).
-     - nom contenant "abonn" / "mensuel" / "abo"      -> ABONNEMENT (quota mensuel)
-     - nom contenant un nombre (10, 30, 100…)          -> PACK DE CRÉDITS de ce nombre
-   (Un override par ID de variante reste possible via les variables
-    d'environnement LEMON_VARIANT_* si tu veux être 100 % précis un jour.)
+   Gumroad fournit une clé de licence à chaque achat. On la vérifie via
+   l'API publique https://api.gumroad.com/v2/licenses/verify (product_id + key).
+   On configure l'ID de chaque produit Gumroad dans les variables d'env :
+     GUMROAD_PRODUCT_ABO    -> abonnement (quota mensuel)
+     GUMROAD_PRODUCT_PACK10 -> pack 10 crédits
+     GUMROAD_PRODUCT_PACK30 -> pack 30 crédits
+     GUMROAD_PRODUCT_PACK100-> pack 100 crédits
 
    Modes :
      DEV_OPEN=true -> aucune licence requise (tests) ; plan "dev"
-     sinon         -> clé Lemon obligatoire
+     sinon         -> clé Gumroad obligatoire
    ========================================================================= */
 
 // Quota mensuel de l'abonnement + essai (modifiables via variables d'environnement)
 function planLimits() {
   return {
     dev: parseInt(process.env.LIMIT_DEV || "1000", 10),
-    abo: parseInt(process.env.LIMIT_ABO || "60", 10),   // abonnement unique 4,99 €
-    trial: parseInt(process.env.LIMIT_TRIAL || "3", 10), // essai gratuit / an / appareil
+    abo: parseInt(process.env.LIMIT_ABO || "60", 10),
+    trial: parseInt(process.env.LIMIT_TRIAL || "3", 10),
   };
 }
 
-// (Optionnel) override précis par ID de variante Lemon.
-function creditPacksById() {
-  const m = {};
-  if (process.env.LEMON_VARIANT_PACK10) m[process.env.LEMON_VARIANT_PACK10] = 10;
-  if (process.env.LEMON_VARIANT_PACK30) m[process.env.LEMON_VARIANT_PACK30] = 30;
-  if (process.env.LEMON_VARIANT_PACK100) m[process.env.LEMON_VARIANT_PACK100] = 100;
-  return m;
-}
-function isSubscriptionVariantId(variantId) {
-  const sub = String(process.env.LEMON_VARIANT_ABO || "");
-  return sub && String(variantId) === sub;
+// Liste des IDs de produits Gumroad à essayer (l'offre est ensuite déduite
+// du NOM du produit renvoyé par Gumroad, pas de l'ordre des variables).
+function gumroadProductIds() {
+  return [
+    process.env.GUMROAD_PRODUCT_ABO,
+    process.env.GUMROAD_PRODUCT_PACK10,
+    process.env.GUMROAD_PRODUCT_PACK30,
+    process.env.GUMROAD_PRODUCT_PACK100,
+    process.env.GUMROAD_PRODUCT_EXTRA, // emplacement optionnel de secours
+  ].filter(Boolean);
 }
 
-// Classe l'achat à partir des noms (et des ID si fournis).
-function classify({ variantId, variantName, productName }) {
+// Déduit l'offre à partir du nom du produit/variante renvoyé par Gumroad.
+function classifyByName(purchase) {
   const limits = planLimits();
-
-  // 1) Override précis par ID de variante (si tu les as renseignés un jour)
-  if (isSubscriptionVariantId(variantId)) return { kind: "subscription", limit: limits.abo };
-  const byId = creditPacksById();
-  if (byId[String(variantId)]) return { kind: "credits", creditGrant: byId[String(variantId)] };
-
-  // 2) Sinon, on lit les NOMS renvoyés par Lemon Squeezy
-  const name = ((variantName || "") + " " + (productName || "")).toLowerCase();
-
-  // Abonnement ?
+  const name = (
+    (purchase.product_name || "") + " " + (purchase.variants || "")
+  ).toLowerCase();
   if (/abonn|mensuel|subscription|\babo\b/.test(name)) {
     return { kind: "subscription", limit: limits.abo };
   }
-  // Pack de crédits ? -> on prend le nombre présent dans le nom
-  //   "Pack Test — 10 recherches" -> 10 crédits, "… 100 …" -> 100 crédits
   let m = name.match(/(\d+)\s*(cr[ée]dit|recherche)/);
-  if (!m) m = name.match(/pack[^0-9]*(\d+)/);
-  if (!m) m = name.match(/(\d+)/);
+  if (!m) m = name.match(/(\d{1,4})/);
   if (m) return { kind: "credits", creditGrant: parseInt(m[1], 10) };
-
-  // 3) Par défaut : on considère un abonnement (évite de bloquer un vrai client)
+  // Par défaut : abonnement (évite de bloquer un vrai client)
   return { kind: "subscription", limit: limits.abo };
 }
 
-// Cache mémoire court pour éviter d'appeler Lemon à chaque analyse
+// Cache mémoire court pour éviter d'appeler Gumroad à chaque analyse
 const cache = new Map(); // key -> { at, result }
 const TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-async function validateWithLemon(licenseKey) {
-  const res = await fetch("https://api.lemonsqueezy.com/v1/licenses/validate", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({ license_key: licenseKey }).toString(),
-  });
-  const data = await res.json().catch(() => ({}));
-  const valid = !!data.valid;
-  const meta = data.meta || {};
-  const status = (data.license_key && data.license_key.status) || "";
-  return {
-    valid: valid && status !== "expired",
-    variantId: meta.variant_id || meta.variantId || "",
-    variantName: meta.variant_name || "",
-    productName: meta.product_name || "",
-  };
+// Appel API Gumroad. On accepte aussi bien un ID de produit qu'un permalien
+// (la fin de l'URL gumroad.com/l/XXXX) : on essaie les deux champs.
+// Lève une erreur en cas de panne réseau ; renvoie {success:false} si non reconnu.
+async function verifyGumroad(value, licenseKey) {
+  for (const field of ["product_id", "product_permalink"]) {
+    const res = await fetch("https://api.gumroad.com/v2/licenses/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+      body: new URLSearchParams({
+        [field]: value,
+        license_key: licenseKey,
+        increment_uses_count: "false", // on ne gonfle pas le compteur d'usages Gumroad
+      }).toString(),
+    });
+    const data = await res.json().catch(() => ({ success: false }));
+    if (data && data.success) return data;
+  }
+  return { success: false };
 }
 
-/* Renvoie un objet décrivant la clé :
-   { kind: "dev"|"subscription"|"credits"|"invalid"|"error"|"none",
-     limit,          // quota mensuel si abonnement
-     creditGrant }   // nb de crédits à créditer si pack
-*/
+// Un achat est-il encore "vivant" (ni remboursé, ni contesté) ?
+function purchaseAlive(p) {
+  if (!p) return false;
+  if (p.refunded || p.disputed || p.chargebacked) return false;
+  return true;
+}
+// L'abonnement est-il encore actif (pas terminé/échoué) ?
+function subscriptionActive(p) {
+  if (!purchaseAlive(p)) return false;
+  // subscription_cancelled_at seul = résilié mais actif jusqu'à la fin de période.
+  // subscription_ended_at / subscription_failed_at = réellement terminé.
+  if (p.subscription_ended_at) return false;
+  if (p.subscription_failed_at) return false;
+  return true;
+}
+
+/* Renvoie { kind: "dev"|"subscription"|"credits"|"invalid"|"error"|"none", limit, creditGrant } */
 async function checkLicense(licenseKey) {
   const limits = planLimits();
 
   if (String(process.env.DEV_OPEN).toLowerCase() === "true") {
     return { kind: "dev", limit: limits.dev };
   }
-  if (!licenseKey) {
-    return { kind: "none" }; // seul l'essai gratuit est possible
-  }
+  if (!licenseKey) return { kind: "none" };
 
   const now = Date.now();
   const cached = cache.get(licenseKey);
   if (cached && now - cached.at < TTL_MS) return cached.result;
 
-  let result;
+  const productIds = gumroadProductIds();
+  let result = { kind: "invalid" };
+  let hadError = false;
+
   try {
-    const info = await validateWithLemon(licenseKey);
-    result = info.valid ? classify(info) : { kind: "invalid" };
+    // On essaie la clé contre chacun de nos produits jusqu'à trouver le bon.
+    for (const id of productIds) {
+      let data;
+      try {
+        data = await verifyGumroad(id, licenseKey);
+      } catch (_) {
+        hadError = true;
+        continue;
+      }
+      if (data && data.success && data.purchase) {
+        const p = data.purchase;
+        const offer = classifyByName(p); // { kind: subscription|credits, ... }
+        if (offer.kind === "subscription") {
+          result = subscriptionActive(p) ? offer : { kind: "invalid" };
+        } else {
+          result = purchaseAlive(p) ? offer : { kind: "invalid" };
+        }
+        break; // clé reconnue, on arrête
+      }
+    }
+    // Si aucune correspondance mais qu'une requête a planté -> erreur (réessai possible)
+    if (result.kind === "invalid" && hadError) result = { kind: "error" };
   } catch (_) {
-    result = { kind: "error" }; // panne Lemon -> on proposera de réessayer
+    result = { kind: "error" };
   }
-  cache.set(licenseKey, { at: now, result });
+
+  // On ne met en cache que les résultats stables (pas les erreurs réseau)
+  if (result.kind !== "error") cache.set(licenseKey, { at: now, result });
   return result;
 }
 
-module.exports = { checkLicense, planLimits, classify };
+module.exports = { checkLicense, planLimits, gumroadProductIds, classifyByName };
