@@ -25,26 +25,40 @@ function planLimits() {
 
 // Liste des IDs de produits Gumroad à essayer (l'offre est ensuite déduite
 // du NOM du produit renvoyé par Gumroad, pas de l'ordre des variables).
+// Un même serveur peut alimenter PLUSIEURS extensions : ajoute tous les
+// product IDs (KDP + MarketScout + ...) dans GUMROAD_PRODUCT_IDS
+// (liste séparée par des virgules). Les 4 variables nommées restent gérées
+// pour compatibilité.
 function gumroadProductIds() {
-  return [
+  const named = [
     process.env.GUMROAD_PRODUCT_ABO,
     process.env.GUMROAD_PRODUCT_PACK10,
     process.env.GUMROAD_PRODUCT_PACK30,
     process.env.GUMROAD_PRODUCT_PACK100,
-    process.env.GUMROAD_PRODUCT_EXTRA, // emplacement optionnel de secours
-  ].filter(Boolean);
+    process.env.GUMROAD_PRODUCT_EXTRA,
+  ];
+  const list = (process.env.GUMROAD_PRODUCT_IDS || "")
+    .split(",")
+    .map((s) => s.trim());
+  // dédoublonnage + suppression des vides
+  return [...new Set([...named, ...list].filter(Boolean))];
 }
 
 // Déduit l'offre à partir du nom du produit/variante renvoyé par Gumroad.
+// - "Abonnement …" -> abonnement (quota mensuel = 1er nombre trouvé, sinon LIMIT_ABO)
+// - "… 10/30/100 …" -> pack de crédits de ce nombre
 function classifyByName(purchase) {
   const limits = planLimits();
   const name = (
     (purchase.product_name || "") + " " + (purchase.variants || "")
   ).toLowerCase();
   if (/abonn|mensuel|subscription|\babo\b/.test(name)) {
-    return { kind: "subscription", limit: limits.abo };
+    // quota mensuel : un nombre dans le nom (ex. "100 analyses/mois") sinon défaut
+    const mm = name.match(/(\d{1,4})/);
+    const limit = mm ? parseInt(mm[1], 10) : limits.abo;
+    return { kind: "subscription", limit };
   }
-  let m = name.match(/(\d+)\s*(cr[ée]dit|recherche)/);
+  let m = name.match(/(\d+)\s*(cr[ée]dit|recherche|analyse)/);
   if (!m) m = name.match(/(\d{1,4})/);
   if (m) return { kind: "credits", creditGrant: parseInt(m[1], 10) };
   // Par défaut : abonnement (évite de bloquer un vrai client)
