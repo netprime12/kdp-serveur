@@ -24,7 +24,7 @@
 
 const express = require("express");
 const cors = require("cors");
-const { generate } = require("./keypool");
+const { generate } = require("./aiprovider");
 const { checkLicense } = require("./license");
 const store = require("./store");
 
@@ -85,7 +85,7 @@ identify you.</li>
 the server to verify your access and quota.</li>
 <li><b>Analysis data</b>: when you run an analysis, the public information on the Amazon
 page you are viewing (titles, prices, public rankings) and your request are sent to our
-server and then to the Google Gemini API to generate the analysis.</li>
+server and then to our AI provider (Google Gemini or Mistral AI) to generate the analysis.</li>
 </ul>
 <h2>2. What we do NOT do</h2>
 <ul>
@@ -96,7 +96,7 @@ server and then to the Google Gemini API to generate the analysis.</li>
 </ul>
 <h2>3. Sub-processors</h2>
 <ul>
-<li><b>Google (Gemini API)</b> — AI generation of the analyses.</li>
+<li><b>Google (Gemini API)</b> and <b>Mistral AI (API)</b> — AI generation of the analyses.</li>
 <li><b>Gumroad</b> — payments, tax and license management.</li>
 <li><b>Server host</b> — running the service.</li>
 </ul>
@@ -125,7 +125,7 @@ contient aucune information personnelle et ne permet pas de vous identifier.</li
 est envoyée au serveur pour vérifier vos droits et votre quota.</li>
 <li><b>Données d'analyse</b> : lorsque vous lancez une analyse, les informations de la
 page Amazon consultée (titres, prix, classements publics) et votre demande sont
-envoyées à notre serveur, puis à l'API Google Gemini, afin de générer l'analyse.</li>
+envoyées à notre serveur, puis à notre fournisseur d'IA (Google Gemini ou Mistral AI), afin de générer l'analyse.</li>
 </ul>
 <h2>2. Ce que nous ne faisons pas</h2>
 <ul>
@@ -138,7 +138,7 @@ par notre prestataire (Gumroad).</li>
 </ul>
 <h2>3. Prestataires (sous-traitants)</h2>
 <ul>
-<li><b>Google (API Gemini)</b> — génération des analyses par IA.</li>
+<li><b>Google (API Gemini)</b> et <b>Mistral AI (API)</b> — génération des analyses par IA.</li>
 <li><b>Gumroad</b> — paiement, TVA et gestion des licences.</li>
 <li><b>Hébergeur du serveur</b> — exécution du service.</li>
 </ul>
