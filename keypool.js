@@ -23,12 +23,19 @@ async function callGeminiOnce(apiKey, prompt, model) {
     encodeURIComponent(model) +
     ":generateContent?key=" +
     encodeURIComponent(apiKey);
+  const wantsJson = /json/i.test(prompt);
+  const generationConfig = {
+    temperature: wantsJson ? 0.3 : 0.7,
+    maxOutputTokens: 4096,
+  };
+  // Mode JSON de Gemini quand le prompt demande du JSON (réponse propre, non tronquée)
+  if (wantsJson) generationConfig.responseMimeType = "application/json";
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+      generationConfig,
     }),
   });
   if (!res.ok) {

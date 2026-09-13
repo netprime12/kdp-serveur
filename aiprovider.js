@@ -24,18 +24,23 @@ function getMistralKeys() {
 let mcursor = 0; // position courante pour la rotation Mistral
 
 async function callMistralOnce(apiKey, prompt, model) {
+  // Si le prompt demande du JSON, on force le mode JSON strict de Mistral
+  // (réponse = un objet JSON valide et complet, jamais tronqué ni entouré de texte).
+  const wantsJson = /json/i.test(prompt);
+  const payload = {
+    model,
+    messages: [{ role: "user", content: prompt }],
+    temperature: wantsJson ? 0.3 : 0.7,
+    max_tokens: 4096,
+  };
+  if (wantsJson) payload.response_format = { type: "json_object" };
   const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: "Bearer " + apiKey,
     },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 2048,
-    }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
