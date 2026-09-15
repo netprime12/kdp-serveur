@@ -27,6 +27,7 @@ const cors = require("cors");
 const { generate } = require("./aiprovider");
 const { checkLicense } = require("./license");
 const store = require("./store");
+const lof = require("./lof");
 
 const app = express();
 app.use(cors());
@@ -306,6 +307,116 @@ app.post("/analyse", async (req, res) => {
     }
 
     res.json({ ok: true, text, used, limit, credits, restant });
+  } catch (e) {
+    res.status(e.status || 500).json({ ok: false, error: e.message });
+  }
+});
+
+/* =======================================================================
+   LOF — Local Opportunity Finder
+   ======================================================================= */
+
+// Liste des playbooks (pour l'extension)
+app.get("/lof/playbooks", (_req, res) => {
+  const out = {};
+  for (const k of Object.keys(lof.PLAYBOOKS)) out[k] = lof.PLAYBOOKS[k].label;
+  res.json({ ok: true, playbooks: out });
+});
+
+// Combien d'unités (analyses) sont disponibles pour cette licence ?
+async function availableUnits(info, license, deviceId) {
+  const limits = require("./license").planLimits();
+  if (info.kind === "dev") return { bucketPlan: "dev", available: 9999 };
+  if (info.kind === "subscription") {
+    const id = "lic:" + license;
+    const used = await store.getMonthly(id);
+    const credits = await store.getCredits(license);
+    return { bucketPlan: "abo", available: Math.max(0, info.limit - used) + credits, id, limit: info.limit };
+  }
+  if (info.kind === "credits") {
+    const credits = await store.getCredits(license);
+    return { bucketPlan: "credits", available: credits };
+  }
+  // essai gratuit
+  const usedTrial = await store.getTrial(deviceId);
+  return { bucketPlan: "trial", available: Math.max(0, limits.trial - usedTrial), limit: limits.trial };
+}
+
+// Débite n unités dans le bon ordre (mensuel -> crédits -> essai)
+async function spendUnits(info, license, deviceId, n) {
+  for (let k = 0; k < n; k++) {
+    if (info.kind === "dev") { await store.incrementMonthly("dev"); continue; }
+    if (info.kind === "subscription") {
+      const id = "lic:" + license;
+      const used = await store.getMonthly(id);
+      if (used < info.limit) await store.incrementMonthly(id);
+      else await store.consumeCredit(license);
+      continue;
+    }
+    if (info.kind === "credits") { await store.consumeCredit(license); continue; }
+    await store.incrementTrial(deviceId); // trial
+  }
+}
+
+// Analyse d'un lot d'entreprises : 1 unité = 1 entreprise analysée
+app.post("/lof/analyse", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const license = body.license || "";
+    const deviceId = body.deviceId || "";
+    const playbook = body.playbook || "site";
+    const locale = body.locale || "fr";
+    let businesses = Array.isArray(body.businesses) ? body.businesses : [];
+    if (!businesses.length) return res.status(400).json({ ok: false, error: "aucune_entreprise" });
+    if (businesses.length > 20) businesses = businesses.slice(0, 20); // garde-fou coût/temps
+
+    const info = await checkLicense(license);
+    if (info.kind === "error")
+      return res.status(503).json({ ok: false, error: "verification_indisponible",
+        message: "Vérification de la licence momentanément indisponible. Réessaie dans un instant." });
+    if (info.kind === "invalid")
+      return res.status(402).json({ ok: false, error: "abonnement_inactif",
+        message: "Clé invalide, expirée ou annulée. Abonne-toi ou achète un pack de crédits." });
+    if (info.kind === "credits") await store.grantCreditsOnce(license, info.creditGrant);
+    if (info.kind === "none" && !deviceId)
+      return res.status(400).json({ ok: false, error: "deviceId requis pour l'essai gratuit" });
+
+    const av = await availableUnits(info, license, deviceId);
+    if (av.available <= 0) {
+      const msg = av.bucketPlan === "trial"
+        ? "Essai gratuit épuisé. Abonne-toi ou achète un pack de crédits."
+        : "Quota atteint. Il se réinitialise le mois prochain, ou achète un pack de crédits.";
+      return res.status(402).json({ ok: false, error: "quota_atteint", message: msg,
+        resetsAt: av.bucketPlan === "trial" ? store.trialResetsAt() : store.monthlyResetsAt() });
+    }
+
+    const toProcess = Math.min(businesses.length, av.available);
+    const subset = businesses.slice(0, toProcess);
+
+    // 1) audit + scoring déterministe ; 2) explication IA
+    const scored = await lof.scoreBatch(subset, playbook);
+    const results = await lof.explain(scored, playbook, locale);
+
+    // Débit après succès
+    await spendUnits(info, license, deviceId, toProcess);
+
+    // État restant
+    let restant = null;
+    if (info.kind === "subscription") {
+      const id = "lic:" + license;
+      const used = await store.getMonthly(id);
+      restant = Math.max(0, info.limit - used) + (await store.getCredits(license));
+    } else if (info.kind === "credits") restant = await store.getCredits(license);
+    else if (info.kind === "none") restant = Math.max(0, (av.limit || 0) - (await store.getTrial(deviceId)));
+
+    res.json({
+      ok: true,
+      playbook,
+      analysed: toProcess,
+      skipped: businesses.length - toProcess,
+      restant,
+      results: results.map((r) => ({ ...r, audit: undefined })), // audit interne masqué
+    });
   } catch (e) {
     res.status(e.status || 500).json({ ok: false, error: e.message });
   }
