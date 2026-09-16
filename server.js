@@ -201,7 +201,7 @@ show((navigator.language||'en').slice(0,2).toLowerCase()==='fr'?'fr':'en');
 });
 
 /* Construit un résumé de l'état d'une clé (pour l'extension). */
-async function statusFor(license, deviceId) {
+async function statusFor(license, deviceId, req) {
   const info = await checkLicense(license);
 
   if (info.kind === "error") {
@@ -232,12 +232,17 @@ async function statusFor(license, deviceId) {
   if (info.kind === "invalid") {
     return { active: false, plan: null, restant: 0 };
   }
-  // kind === "none" -> essai gratuit
+  // kind === "none" -> essai gratuit (par appareil ET plafonné par IP)
   const usedTrial = await store.getTrial(deviceId);
   const limitTrial = require("./license").planLimits().trial;
+  let restant = Math.max(0, limitTrial - usedTrial);
+  if (ipGuardOn() && req) {
+    const ipUsed = await store.getIpFree(ipHash(req));
+    restant = Math.min(restant, Math.max(0, ipMax() - ipUsed)); // reflète le blocage IP
+  }
   return {
     active: false, plan: "trial", limit: limitTrial, used: usedTrial,
-    restant: Math.max(0, limitTrial - usedTrial), resetsAt: store.trialResetsAt(),
+    restant, resetsAt: store.trialResetsAt(),
   };
 }
 
@@ -246,7 +251,7 @@ app.post("/verifier-licence", async (req, res) => {
   try {
     const license = (req.body && req.body.license) || "";
     const deviceId = (req.body && req.body.deviceId) || "";
-    res.json(await statusFor(license, deviceId));
+    res.json(await statusFor(license, deviceId, req));
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
