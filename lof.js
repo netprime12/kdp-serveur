@@ -115,9 +115,11 @@ function subscores(b, a, pb) {
   if (!a.reachable && (b.phone || b.email)) acces = Math.max(acces, (b.phone ? 0.5 : 0) + (b.email ? 0.3 : 0));
   acces = clamp01(acces);
 
-  // VALEUR potentielle (relative, jamais un CA prétendu)
+  // VALEUR potentielle (relative, jamais un CA prétendu).
+  // À défaut de ticket moyen, on module par le volume d'avis (proxy de taille/activité).
   let valeur;
   if (ticket != null && !isNaN(ticket)) valeur = clamp01(ticket / 500); // 500+ = valeur haute
+  else if (reviews != null) valeur = clamp01(0.4 + Math.min(reviews, 200) / 200 * 0.35);
   else valeur = 0.5; // inconnu -> neutre
 
   // URGENCE — problèmes à impact immédiat
@@ -186,6 +188,12 @@ function auditAndScoreOne(b, a, pbKey) {
     name: b.name || "(sans nom)",
     city: b.city || "",
     website: b.website || "",
+    address: b.address || "",
+    phone: b.phone || "",
+    mapsUri: b.mapsUri || "",
+    place_id: b.place_id || "",
+    rating: b.rating != null ? b.rating : null,
+    reviews: b.reviews != null ? b.reviews : null,
     score,
     confidence: conf.level,
     subscores: {

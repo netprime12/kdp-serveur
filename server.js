@@ -433,7 +433,10 @@ app.post("/lof/search", async (req, res) => {
         message: "Quota épuisé : abonne-toi ou achète un pack pour lancer une nouvelle recherche.",
         resetsAt: av.bucketPlan === "trial" ? store.trialResetsAt() : store.monthlyResetsAt() });
 
-    const max = Math.min(Number(body.max) || 20, av.available, 20);
+    // On respecte le nombre demandé (3-20). La recherche Google coûte le même
+    // prix qu'elle rende 3 ou 20 résultats ; on ne la bride donc PAS par le quota
+    // (le quota est débité seulement à l'analyse). Il suffit d'avoir du quota > 0.
+    const max = Math.min(Math.max(1, Number(body.max) || 20), 20);
     try {
       const businesses = await lof.placesSearch({
         query: body.query, category: body.category, city: body.city,
