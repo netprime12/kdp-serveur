@@ -260,4 +260,56 @@ async function explain(results, pbKey, locale) {
   });
 }
 
-module.exports = { PLAYBOOKS, playbook, scoreBatch, explain };
+/* --- Recherche Google Places (API "New") — source principale -------------- */
+// La clé Google reste CÔTÉ SERVEUR (env GOOGLE_PLACES_KEY). L'extension n'y a
+// jamais accès : elle appelle /lof/search, qui appelle Google ici.
+// searchText couvre le monde entier ; on récupère aussi site + téléphone + note
+// en un seul appel (pas besoin de Place Details séparé) pour limiter le coût.
+async function placesSearch({ query, category, city, max, locale, regionCode }) {
+  const key = process.env.GOOGLE_PLACES_KEY || "";
+  if (!key) { const e = new Error("places_non_configure"); e.status = 501; throw e; }
+  const textQuery = (query && query.trim()) || [category, city].filter(Boolean).join(" ").trim();
+  if (!textQuery) { const e = new Error("requete_vide"); e.status = 400; throw e; }
+  const maxN = Math.max(1, Math.min(20, Number(max) || 20));
+  const lang = (locale || "fr").slice(0, 2).toLowerCase();
+
+  const fieldMask = [
+    "places.id", "places.displayName", "places.formattedAddress",
+    "places.rating", "places.userRatingCount", "places.websiteUri",
+    "places.nationalPhoneNumber", "places.location", "places.googleMapsUri",
+    "places.businessStatus",
+  ].join(",");
+
+  const body = { textQuery, maxResultCount: maxN, languageCode: lang };
+  if (regionCode) body.regionCode = String(regionCode).slice(0, 2).toUpperCase();
+
+  const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": key,
+      "X-Goog-FieldMask": fieldMask,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = (data && data.error && data.error.message) || ("Places " + res.status);
+    const e = new Error(msg); e.status = res.status === 403 ? 403 : 502; throw e;
+  }
+  const places = Array.isArray(data.places) ? data.places : [];
+  return places.map((p) => ({
+    name: (p.displayName && p.displayName.text) || "",
+    city: city || "",
+    address: p.formattedAddress || "",
+    website: p.websiteUri || "",
+    phone: p.nationalPhoneNumber || "",
+    rating: typeof p.rating === "number" ? p.rating : null,
+    reviews: typeof p.userRatingCount === "number" ? p.userRatingCount : null,
+    place_id: p.id || "",
+    mapsUri: p.googleMapsUri || "",
+    status: p.businessStatus || "",
+  }));
+}
+
+module.exports = { PLAYBOOKS, playbook, scoreBatch, explain, placesSearch };

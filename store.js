@@ -26,6 +26,9 @@ function monthKey(d = new Date()) {
 function yearKey(d = new Date()) {
   return String(d.getUTCFullYear());
 }
+// Garde-fou IP : "lifetime" (à vie, sans expiration) ou "year" (par année).
+function ipMode() { return (process.env.TRIAL_IP_MODE || "lifetime").toLowerCase() === "year" ? "year" : "lifetime"; }
+function ipSuffix() { return ipMode() === "year" ? ":" + new Date().getUTCFullYear() : ""; }
 function monthlyResetsAt() {
   const d = new Date();
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString();
@@ -90,21 +93,32 @@ const R = {
     if (v < 0) { await rc(["SET", "c:" + licenseKey, "0"]).catch(() => {}); return 0; }
     return v;
   },
+  async getIpFree(hash) {
+    const v = await rc(["GET", "ipf:" + hash + ipSuffix()]);
+    return parseInt(v || "0", 10) || 0;
+  },
+  async incrementIpFree(hash) {
+    const key = "ipf:" + hash + ipSuffix();
+    const n = await rc(["INCR", key]);
+    if (n === 1 && ipMode() === "year") await rc(["EXPIRE", key, "34128000"]).catch(() => {}); // ~13 mois
+    return n;
+  },
 };
 
 /* =======================================================================
    MODE FICHIER (local) — secours pour tes tests
    ======================================================================= */
 const FILE = process.env.STORE_FILE || path.join(__dirname, "usage.json");
-let data = { monthly: {}, trial: {}, credits: {} };
+let data = { monthly: {}, trial: {}, credits: {}, ipfree: {} };
 try {
   if (!useRedis && fs.existsSync(FILE)) {
     const loaded = JSON.parse(fs.readFileSync(FILE, "utf8")) || {};
     data.monthly = loaded.monthly || {};
     data.trial = loaded.trial || {};
     data.credits = loaded.credits || {};
+    data.ipfree = loaded.ipfree || {};
   }
-} catch (_) { data = { monthly: {}, trial: {}, credits: {} }; }
+} catch (_) { data = { monthly: {}, trial: {}, credits: {}, ipfree: {} }; }
 
 let saveTimer = null;
 function persist() {
@@ -166,6 +180,20 @@ const F = {
     persist();
     return rec.balance;
   },
+  async getIpFree(hash) {
+    const rec = data.ipfree[hash];
+    const period = ipMode() === "year" ? yearKey() : "life";
+    if (!rec || rec.period !== period) return 0;
+    return rec.count || 0;
+  },
+  async incrementIpFree(hash) {
+    const period = ipMode() === "year" ? yearKey() : "life";
+    const rec = data.ipfree[hash];
+    if (!rec || rec.period !== period) data.ipfree[hash] = { period, count: 1 };
+    else rec.count = (rec.count || 0) + 1;
+    persist();
+    return data.ipfree[hash].count;
+  },
 };
 
 const impl = useRedis ? R : F;
@@ -179,6 +207,9 @@ module.exports = {
   getCredits: impl.getCredits,
   grantCreditsOnce: impl.grantCreditsOnce,
   consumeCredit: impl.consumeCredit,
+  getIpFree: impl.getIpFree,
+  incrementIpFree: impl.incrementIpFree,
   monthlyResetsAt,
   trialResetsAt,
+  ipMode,
 };

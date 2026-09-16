@@ -24,16 +24,39 @@
 
 const express = require("express");
 const cors = require("cors");
+const crypto = require("crypto");
 const { generate } = require("./aiprovider");
 const { checkLicense } = require("./license");
 const store = require("./store");
 const lof = require("./lof");
 
 const app = express();
+app.set("trust proxy", true); // Render est derrière un proxy -> vraie IP dans X-Forwarded-For
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
 const PORT = process.env.PORT || 8787;
+
+/* --- Garde-fou essai gratuit par IP (hachée, jamais stockée en clair) ------
+   Par défaut : l'essai gratuit est réclamable UNE SEULE FOIS PAR IP, à vie.
+   Réglable par variables d'environnement :
+     TRIAL_IP_GUARD = on | off        (défaut on)
+     TRIAL_IP_MODE  = lifetime | year (défaut lifetime)
+     TRIAL_IP_MAX   = nombre d'unités gratuites autorisées par IP (défaut = essai)
+   Assouplir = mettre TRIAL_IP_MODE=year ou augmenter TRIAL_IP_MAX. */
+function ipGuardOn() { return String(process.env.TRIAL_IP_GUARD || "on").toLowerCase() !== "off"; }
+function clientIp(req) {
+  const xf = (req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return xf || req.ip || req.socket?.remoteAddress || "";
+}
+function ipHash(req) {
+  const salt = process.env.IP_SALT || "eclozia-lof";
+  return crypto.createHash("sha256").update(salt + "|" + clientIp(req)).digest("hex").slice(0, 24);
+}
+function ipMax() {
+  const n = parseInt(process.env.TRIAL_IP_MAX || "", 10);
+  return Number.isFinite(n) && n > 0 ? n : require("./license").planLimits().trial;
+}
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "kdp-analyzer-server", time: new Date().toISOString() });
@@ -87,6 +110,11 @@ the server to verify your access and quota.</li>
 <li><b>Analysis data</b>: when you run an analysis, the public information on the Amazon
 page you are viewing (titles, prices, public rankings) and your request are sent to our
 server and then to our AI provider (Google Gemini or Mistral AI) to generate the analysis.</li>
+<li><b>Business search (LocalScout)</b>: when you run an integrated local search, your query
+(business type, city) is sent to Google Places API to obtain the list of matching public
+businesses; the public website of each business you choose to analyze is then audited.</li>
+<li><b>Hashed IP</b>: to prevent free-trial abuse, a one-way hash of your IP address is
+stored as an anti-abuse counter. The IP itself is never stored in clear text.</li>
 </ul>
 <h2>2. What we do NOT do</h2>
 <ul>
@@ -98,6 +126,7 @@ server and then to our AI provider (Google Gemini or Mistral AI) to generate the
 <h2>3. Sub-processors</h2>
 <ul>
 <li><b>Google (Gemini API)</b> and <b>Mistral AI (API)</b> — AI generation of the analyses.</li>
+<li><b>Google Places API</b> — integrated local business search (LocalScout only).</li>
 <li><b>Gumroad</b> — payments, tax and license management.</li>
 <li><b>Server host</b> — running the service.</li>
 </ul>
@@ -127,6 +156,13 @@ est envoyée au serveur pour vérifier vos droits et votre quota.</li>
 <li><b>Données d'analyse</b> : lorsque vous lancez une analyse, les informations de la
 page Amazon consultée (titres, prix, classements publics) et votre demande sont
 envoyées à notre serveur, puis à notre fournisseur d'IA (Google Gemini ou Mistral AI), afin de générer l'analyse.</li>
+<li><b>Recherche d'entreprises (LocalScout)</b> : lors d'une recherche locale intégrée, votre
+requête (type d'entreprise, ville) est envoyée à l'API Google Places pour obtenir la liste
+des entreprises publiques correspondantes ; le site public de chaque entreprise que vous
+choisissez d'analyser est ensuite audité.</li>
+<li><b>IP hachée</b> : pour éviter l'abus de l'essai gratuit, une empreinte à sens unique de
+votre adresse IP est conservée comme compteur anti-abus. L'IP elle-même n'est jamais
+stockée en clair.</li>
 </ul>
 <h2>2. Ce que nous ne faisons pas</h2>
 <ul>
@@ -140,6 +176,7 @@ par notre prestataire (Gumroad).</li>
 <h2>3. Prestataires (sous-traitants)</h2>
 <ul>
 <li><b>Google (API Gemini)</b> et <b>Mistral AI (API)</b> — génération des analyses par IA.</li>
+<li><b>API Google Places</b> — recherche locale intégrée d'entreprises (LocalScout uniquement).</li>
 <li><b>Gumroad</b> — paiement, TVA et gestion des licences.</li>
 <li><b>Hébergeur du serveur</b> — exécution du service.</li>
 </ul>
@@ -270,14 +307,20 @@ app.post("/analyse", async (req, res) => {
         });
       }
     } else {
-      // kind === "none" -> essai gratuit annuel par appareil
+      // kind === "none" -> essai gratuit par appareil + garde-fou IP
       if (!deviceId) return res.status(400).json({ ok: false, error: "deviceId requis pour l'essai gratuit" });
+      if (ipGuardOn() && (await store.getIpFree(ipHash(req))) >= ipMax()) {
+        return res.status(402).json({
+          ok: false, error: "essai_ip_epuise",
+          message: "Essai gratuit déjà utilisé sur ce réseau. Abonne-toi ou achète un pack de crédits pour continuer.",
+        });
+      }
       const usedTrial = await store.getTrial(deviceId);
       if (usedTrial < limits.trial) { bucket = "trial"; ctx = { limit: limits.trial }; }
       else {
         return res.status(402).json({
           ok: false, error: "essai_termine",
-          message: "Essai gratuit épuisé pour cette année. Abonne-toi (4,99 €) ou achète un pack de crédits pour continuer.",
+          message: "Essai gratuit épuisé pour cette année. Abonne-toi ou achète un pack de crédits pour continuer.",
           used: usedTrial, limit: limits.trial, resetsAt: store.trialResetsAt(),
         });
       }
@@ -298,6 +341,7 @@ app.post("/analyse", async (req, res) => {
       restant = credits;
     } else if (bucket === "trial") {
       used = await store.incrementTrial(deviceId);
+      if (ipGuardOn()) await store.incrementIpFree(ipHash(req));
       limit = ctx.limit;
       restant = Math.max(0, limit - used);
     } else if (bucket === "dev") {
@@ -324,7 +368,7 @@ app.get("/lof/playbooks", (_req, res) => {
 });
 
 // Combien d'unités (analyses) sont disponibles pour cette licence ?
-async function availableUnits(info, license, deviceId) {
+async function availableUnits(info, license, deviceId, req) {
   const limits = require("./license").planLimits();
   if (info.kind === "dev") return { bucketPlan: "dev", available: 9999 };
   if (info.kind === "subscription") {
@@ -337,13 +381,18 @@ async function availableUnits(info, license, deviceId) {
     const credits = await store.getCredits(license);
     return { bucketPlan: "credits", available: credits };
   }
-  // essai gratuit
+  // essai gratuit : limité par l'appareil ET par l'IP (garde-fou)
   const usedTrial = await store.getTrial(deviceId);
-  return { bucketPlan: "trial", available: Math.max(0, limits.trial - usedTrial), limit: limits.trial };
+  let available = Math.max(0, limits.trial - usedTrial);
+  if (ipGuardOn()) {
+    const ipUsed = await store.getIpFree(ipHash(req));
+    available = Math.min(available, Math.max(0, ipMax() - ipUsed));
+  }
+  return { bucketPlan: "trial", available, limit: limits.trial };
 }
 
 // Débite n unités dans le bon ordre (mensuel -> crédits -> essai)
-async function spendUnits(info, license, deviceId, n) {
+async function spendUnits(info, license, deviceId, n, req) {
   for (let k = 0; k < n; k++) {
     if (info.kind === "dev") { await store.incrementMonthly("dev"); continue; }
     if (info.kind === "subscription") {
@@ -354,9 +403,53 @@ async function spendUnits(info, license, deviceId, n) {
       continue;
     }
     if (info.kind === "credits") { await store.consumeCredit(license); continue; }
-    await store.incrementTrial(deviceId); // trial
+    await store.incrementTrial(deviceId); // trial appareil
+    if (ipGuardOn()) await store.incrementIpFree(ipHash(req)); // + garde-fou IP
   }
 }
+
+// Recherche intégrée d'entreprises (Google Places, clé côté serveur).
+// Ne débite PAS de quota (le débit a lieu à l'analyse), mais exige des unités
+// disponibles pour éviter des appels Places illimités (coût Google).
+app.post("/lof/search", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const license = body.license || "";
+    const deviceId = body.deviceId || "";
+    const info = await checkLicense(license);
+    if (info.kind === "error")
+      return res.status(503).json({ ok: false, error: "verification_indisponible",
+        message: "Vérification de la licence momentanément indisponible. Réessaie dans un instant." });
+    if (info.kind === "invalid")
+      return res.status(402).json({ ok: false, error: "abonnement_inactif",
+        message: "Clé invalide, expirée ou annulée. Abonne-toi ou achète un pack de crédits." });
+    if (info.kind === "credits") await store.grantCreditsOnce(license, info.creditGrant);
+    if (info.kind === "none" && !deviceId)
+      return res.status(400).json({ ok: false, error: "deviceId requis pour l'essai gratuit" });
+
+    const av = await availableUnits(info, license, deviceId, req);
+    if (av.available <= 0)
+      return res.status(402).json({ ok: false, error: "quota_atteint",
+        message: "Quota épuisé : abonne-toi ou achète un pack pour lancer une nouvelle recherche.",
+        resetsAt: av.bucketPlan === "trial" ? store.trialResetsAt() : store.monthlyResetsAt() });
+
+    const max = Math.min(Number(body.max) || 20, av.available, 20);
+    try {
+      const businesses = await lof.placesSearch({
+        query: body.query, category: body.category, city: body.city,
+        max, locale: body.locale || "fr", regionCode: body.regionCode,
+      });
+      res.json({ ok: true, count: businesses.length, available: av.available, businesses, attribution: "Résultats fournis par Google" });
+    } catch (e) {
+      if (e.status === 501)
+        return res.status(501).json({ ok: false, error: "places_non_configure",
+          message: "La recherche intégrée n'est pas encore activée. Utilise l'import CSV en attendant." });
+      return res.status(e.status || 502).json({ ok: false, error: "places_erreur", message: e.message });
+    }
+  } catch (e) {
+    res.status(e.status || 500).json({ ok: false, error: e.message });
+  }
+});
 
 // Analyse d'un lot d'entreprises : 1 unité = 1 entreprise analysée
 app.post("/lof/analyse", async (req, res) => {
@@ -381,7 +474,7 @@ app.post("/lof/analyse", async (req, res) => {
     if (info.kind === "none" && !deviceId)
       return res.status(400).json({ ok: false, error: "deviceId requis pour l'essai gratuit" });
 
-    const av = await availableUnits(info, license, deviceId);
+    const av = await availableUnits(info, license, deviceId, req);
     if (av.available <= 0) {
       const msg = av.bucketPlan === "trial"
         ? "Essai gratuit épuisé. Abonne-toi ou achète un pack de crédits."
@@ -398,7 +491,7 @@ app.post("/lof/analyse", async (req, res) => {
     const results = await lof.explain(scored, playbook, locale);
 
     // Débit après succès
-    await spendUnits(info, license, deviceId, toProcess);
+    await spendUnits(info, license, deviceId, toProcess, req);
 
     // État restant
     let restant = null;

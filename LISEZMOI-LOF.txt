@@ -1,0 +1,28 @@
+LocalScout (LOF) — nouvelles variables d'environnement Render
+=============================================================
+
+RECHERCHE INTÉGRÉE (Google Places) — nécessaire pour le mode "Recherche" :
+  GOOGLE_PLACES_KEY = <ta clé Google Places API (New)>
+  (sans cette clé, le mode Recherche renvoie un message "utilise l'import CSV".
+   L'import CSV fonctionne SANS clé Google.)
+
+Créer la clé Google :
+  1. https://console.cloud.google.com → nouveau projet.
+  2. "APIs & Services" → activer "Places API (New)".
+  3. Activer la facturation (carte requise ; Google offre un crédit gratuit mensuel).
+  4. "Identifiants" → créer une clé API → la restreindre à "Places API (New)".
+  5. Coller la valeur dans GOOGLE_PLACES_KEY sur Render.
+  Coût maîtrisé : la recherche est plafonnée à 20 résultats et n'est possible
+  que si l'utilisateur a du quota (pas d'appels Places illimités).
+
+GARDE-FOU ESSAI GRATUIT PAR IP (déjà activé par défaut) :
+  TRIAL_IP_GUARD = on            (on par défaut ; "off" pour désactiver)
+  TRIAL_IP_MODE  = lifetime      (défaut : 1 fois par IP À VIE ; "year" = par année)
+  TRIAL_IP_MAX   = <nombre>       (défaut = LIMIT_TRIAL ; ex. 1 pour une seule analyse/IP)
+  IP_SALT        = <chaîne secrète> (sel de hachage de l'IP ; mets une valeur perso)
+
+  Assouplir si des clients légitimes sont bloqués (réseaux partagés, 4G) :
+  → passe TRIAL_IP_MODE=year, ou augmente TRIAL_IP_MAX.
+
+Aucune autre variable ne change. Les 3 extensions déjà publiées ne sont pas affectées
+(le garde-fou IP durcit seulement l'essai gratuit ; les licences payantes ne le voient pas).
