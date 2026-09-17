@@ -1,0 +1,26 @@
+name: Keep Render awake
+
+# Empêche le serveur Render (plan gratuit) de s'endormir après 15 min d'inactivité,
+# en le pingant régulièrement. 100 % gratuit via GitHub Actions.
+
+on:
+  schedule:
+    # Toutes les 10 min. On vise 10 (et non 14) pour garder une marge :
+    # le planificateur de GitHub Actions peut être en retard de quelques minutes.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}   # permet aussi de lancer le ping manuellement depuis l'onglet Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping du serveur LocalScout / KDP
+        run: |
+          echo "Ping de https://kdp-serveur.onrender.com/ ..."
+          code=$(curl -sS -m 40 -o /dev/null -w "%{http_code}" https://kdp-serveur.onrender.com/ || echo "000")
+          echo "Code HTTP : $code"
+          # On considère OK tant que le serveur répond (2xx/3xx/4xx = il est réveillé).
+          # 000 = pas de réponse (réveil en cours) : on ne fait pas échouer le job.
+          if [ "$code" = "000" ]; then
+            echo "Aucune réponse (le serveur se réveille peut-être) — pas d'échec."
+          fi
