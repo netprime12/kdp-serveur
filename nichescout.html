@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NicheScout — Etsy Niche Intelligence by Éclozia</title>
+<style>
+:root{
+  --bg:#0B0F1A;--surface:#141828;--surface2:#1C2238;--surface3:#232942;
+  --border:#2A3050;--border2:#343D62;
+  --green:#2ECC71;--green2:#27AE60;--green-bg:rgba(46,204,113,.1);
+  --orange:#FF8C42;--orange-bg:rgba(255,140,66,.1);
+  --red:#E74C3C;--red-bg:rgba(231,76,60,.1);
+  --blue:#4A90E2;--blue-bg:rgba(74,144,226,.1);
+  --purple:#9B59B6;--gold:#F39C12;
+  --text:#EEF0FF;--muted:#7B88A8;--faint:#3D4A6B;
+  --etsy:#F56400;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.5rem;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:.625rem;font-weight:600;font-size:15px}
+.logo-mark{width:30px;height:30px;background:linear-gradient(135deg,var(--etsy),#FF9F5A);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.logo-sub{font-size:11px;color:var(--muted);font-weight:400;margin-left:.125rem}
+.topbar-right{display:flex;align-items:center;gap:.75rem}
+.lang-sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.3rem .6rem;border-radius:6px;font-size:12px;cursor:pointer;outline:none}
+.trial-badge{font-size:11px;padding:3px 10px;border-radius:4px;background:rgba(245,100,0,.15);color:var(--etsy);border:1px solid rgba(245,100,0,.3)}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 49px)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.25rem;overflow-y:auto;max-height:calc(100vh - 49px);position:sticky;top:49px}
+.main{padding:1.5rem;overflow-y:auto}
+
+/* SIDEBAR ELEMENTS */
+.s-section{margin-bottom:1.375rem}
+.s-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.5rem;display:flex;align-items:center;gap:.375rem}
+.s-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.55rem .75rem;border-radius:7px;font-size:13px;outline:none;transition:border .2s}
+.s-input:focus{border-color:var(--etsy)}
+.s-input::placeholder{color:var(--faint)}
+select.s-input{cursor:pointer}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:.5rem .75rem;margin-bottom:.5rem}
+.toggle-lbl{font-size:12.5px;color:var(--text)}
+.toggle-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:10px;cursor:pointer;transition:.2s}
+.toggle-slider::before{content:'';position:absolute;width:14px;height:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked + .toggle-slider{background:var(--etsy)}
+.toggle input:checked + .toggle-slider::before{transform:translateX(16px)}
+
+.license-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.875rem;margin-bottom:1.25rem}
+.lic-row{display:flex;gap:.5rem;margin-top:.4rem}
+.lic-row input{flex:1;min-width:0}
+.btn-verify{padding:.4rem .75rem;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap}
+.lic-status{font-size:11px;color:var(--muted);margin-top:.375rem;min-height:16px}
+
+/* MANUAL DATA */
+.manual-section{display:none}
+.manual-section.visible{display:block}
+.manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.m-field{display:flex;flex-direction:column;gap:.25rem}
+.m-label{font-size:11px;color:var(--muted)}
+.m-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.4rem .6rem;border-radius:6px;font-size:12px;outline:none}
+.m-input:focus{border-color:var(--etsy)}
+
+/* KEYWORD SEARCH */
+.search-wrap{position:relative}
+.search-wrap input{padding-right:2.5rem}
+.search-icon{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+
+/* COMPARE SLOTS */
+.compare-wrap{display:none}
+.compare-wrap.visible{display:block}
+.compare-slot{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:.6rem .75rem;margin-bottom:.375rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.cs-kw{font-size:12.5px;font-weight:500}
+.cs-score{font-size:11px;color:var(--muted)}
+.cs-rm{background:none;border:none;color:var(--faint);cursor:pointer;font-size:14px;padding:0 .25rem;line-height:1}
+.cs-rm:hover{color:var(--red)}
+
+/* BUTTONS */
+.btn-primary{width:100%;padding:.7rem;background:var(--etsy);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:.2s;margin-top:.375rem}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-primary:disabled{background:var(--border2);color:var(--muted);cursor:not-allowed}
+.btn-secondary{width:100%;padding:.5rem;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:7px;font-size:12.5px;cursor:pointer;transition:.2s;margin-top:.375rem}
+.btn-secondary:hover{border-color:var(--etsy);color:var(--etsy)}
+.notice{font-size:11px;color:var(--muted);line-height:1.55;padding:.375rem .5rem;border-left:2px solid var(--border2);margin-top:.5rem}
+
+/* STATES */
+.state{display:none}
+.state.active{display:flex}
+.state-empty{flex-direction:column;align-items:center;justify-content:center;min-height:400px;color:var(--muted);text-align:center;gap:1rem}
+.state-empty .icon{font-size:52px;opacity:.35}
+.state-empty h3{font-size:18px;font-weight:500;color:var(--text);opacity:.65}
+.state-loading{flex-direction:column;align-items:center;justify-content:center;min-height:400px;gap:1.5rem}
+.spinner{width:44px;height:44px;border:3px solid var(--border2);border-top-color:var(--etsy);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-step{font-size:13px;color:var(--muted);animation:fade 1.5s ease-in-out infinite}
+@keyframes fade{0%,100%{opacity:.4}50%{opacity:1}}
+#state-results{display:none}
+#state-results.active{display:block}
+
+/* VERDICT BANNER */
+.verdict-banner{border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;gap:1rem}
+.vb-go{background:var(--green-bg);border:1px solid rgba(46,204,113,.3)}
+.vb-test{background:var(--orange-bg);border:1px solid rgba(255,140,66,.3)}
+.vb-nogo{background:var(--red-bg);border:1px solid rgba(231,76,60,.3)}
+.vb-icon{font-size:36px;flex-shrink:0}
+.vb-right{flex:1}
+.vb-label{font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.25rem}
+.vb-go .vb-label{color:var(--green)} .vb-test .vb-label{color:var(--orange)} .vb-nogo .vb-label{color:var(--red)}
+.vb-keyword{font-size:22px;font-weight:600;margin-bottom:.375rem}
+.vb-summary{font-size:13px;color:var(--muted);line-height:1.6}
+.vb-score{text-align:right;flex-shrink:0}
+.score-big{font-size:40px;font-weight:700;line-height:1}
+.vb-go .score-big{color:var(--green)} .vb-test .score-big{color:var(--orange)} .vb-nogo .score-big{color:var(--red)}
+.score-lbl{font-size:11px;color:var(--muted)}
+.conf-pill{display:inline-block;font-size:10px;font-weight:500;padding:2px 8px;border-radius:4px;margin-top:.25rem}
+.conf-high{background:var(--green-bg);color:var(--green);border:1px solid rgba(46,204,113,.3)}
+.conf-medium{background:var(--orange-bg);color:var(--orange);border:1px solid rgba(255,140,66,.3)}
+.conf-low{background:var(--red-bg);color:var(--red);border:1px solid rgba(231,76,60,.3)}
+
+/* VERDICT REASONS */
+.reasons-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.25rem}
+.reason-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.875rem;font-size:12.5px;color:var(--muted);line-height:1.55;position:relative;padding-left:1.25rem}
+.reason-card::before{content:'';position:absolute;left:0;top:.875rem;bottom:.875rem;width:3px;border-radius:2px;background:var(--etsy)}
+
+/* SUBSCORES */
+.subscores-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.625rem;margin-bottom:1.25rem}
+.subscore-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.75rem}
+.ss-label{font-size:11px;color:var(--muted);margin-bottom:.25rem}
+.ss-val{font-size:22px;font-weight:600}
+.ss-bar{height:3px;border-radius:2px;background:var(--border2);margin-top:.375rem;overflow:hidden}
+.ss-fill{height:100%;border-radius:2px;transition:width .8s ease}
+.ss-green{color:var(--green)} .ss-fill-green{background:var(--green)}
+.ss-orange{color:var(--orange)} .ss-fill-orange{background:var(--orange)}
+.ss-red{color:var(--red)} .ss-fill-red{background:var(--red)}
+.ss-blue{color:var(--blue)} .ss-fill-blue{background:var(--blue)}
+
+/* REPORT TABS */
+.rtabs{display:flex;gap:4px;margin-bottom:1rem;overflow-x:auto;padding-bottom:2px;flex-wrap:nowrap}
+.rtab{padding:.4rem .875rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:.15s}
+.rtab.active{background:rgba(245,100,0,.15);border-color:rgba(245,100,0,.4);color:var(--etsy)}
+.rpanel{display:none}
+.rpanel.active{display:block}
+
+/* SUB-NICHES */
+.subniche-grid{display:grid;grid-template-columns:1fr 1fr;gap:.625rem}
+.sn-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.875rem;cursor:pointer;transition:.15s;position:relative}
+.sn-card:hover{border-color:var(--etsy)}
+.sn-card.selected{border-color:var(--etsy);background:rgba(245,100,0,.06)}
+.sn-card.selected::after{content:'✓';position:absolute;top:.5rem;right:.625rem;font-size:11px;color:var(--etsy);font-weight:600}
+.sn-kw{font-size:13px;font-weight:500;margin-bottom:.25rem}
+.sn-angle{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--etsy);margin-bottom:.375rem}
+.sn-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.sn-score{position:absolute;top:.5rem;right:.625rem;font-size:12px;font-weight:600;color:var(--orange)}
+.sn-card.selected .sn-score{right:1.75rem}
+.digital-badge{display:inline-block;font-size:9px;font-weight:500;padding:1px 5px;border-radius:3px;background:var(--blue-bg);color:var(--blue);border:1px solid rgba(74,144,226,.3);margin-top:.375rem}
+
+/* SMALL SELLER WINS */
+.ssw-list{display:flex;flex-direction:column;gap:.5rem}
+.ssw-item{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:9px;padding:.75rem .875rem;font-size:13px;color:var(--muted);line-height:1.55}
+
+/* MARKET DATA */
+.mdata-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.625rem;margin-bottom:.875rem}
+.mdata-cell{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.75rem;text-align:center}
+.mdata-val{font-size:20px;font-weight:600;color:var(--text)}
+.mdata-lbl{font-size:11px;color:var(--muted);margin-top:.25rem}
+.sample-list{display:flex;flex-direction:column;gap:.375rem}
+.sample-item{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:.625rem .875rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.si-title{font-size:12.5px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.si-badges{display:flex;gap:.375rem;flex-shrink:0}
+.si-badge{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--surface2);color:var(--muted)}
+
+/* CREATION BRIEF */
+.brief-hero{background:linear-gradient(135deg,rgba(245,100,0,.1),rgba(155,89,182,.1));border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1rem}
+.brief-concept{font-size:16px;font-weight:500;margin-bottom:.5rem}
+.brief-usp{font-size:13px;color:var(--muted);line-height:1.6;padding:.625rem;background:var(--surface);border-radius:7px;border-left:3px solid var(--etsy);margin-top:.75rem}
+.brief-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.875rem}
+.brief-cell{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.875rem}
+.bc-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.375rem}
+.bc-val{font-size:13px;color:var(--text);line-height:1.5}
+.assets-list{display:flex;flex-direction:column;gap:.375rem}
+.asset-item{display:flex;align-items:center;gap:.5rem;font-size:13px;color:var(--muted)}
+.asset-item::before{content:'📄';font-size:12px}
+.tags-cloud{display:flex;flex-wrap:wrap;gap:.375rem;margin-top:.5rem}
+.tag-pill{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.25rem .625rem;border-radius:4px;font-size:12px;cursor:pointer;transition:.15s}
+.tag-pill:hover{border-color:var(--etsy);color:var(--etsy)}
+.tag-pill.copied{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.checklist{display:flex;flex-direction:column;gap:.375rem}
+.cl-item{display:flex;align-items:flex-start;gap:.5rem;font-size:12.5px;color:var(--muted);line-height:1.5}
+.cl-check{width:16px;height:16px;border:1px solid var(--border2);border-radius:3px;flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px}
+.cl-check.checked{background:var(--green);border-color:var(--green);color:#fff}
+.trademark-warn{background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.3);border-radius:7px;padding:.625rem .875rem;font-size:12px;color:var(--gold);margin-top:.75rem}
+
+/* COMPARE */
+.compare-matrix{width:100%;border-collapse:collapse;font-size:13px}
+.compare-matrix th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:.5rem .75rem;border-bottom:1px solid var(--border)}
+.compare-matrix td{padding:.5rem .75rem;border-bottom:1px solid rgba(42,48,80,.5);vertical-align:top;line-height:1.5}
+.winner-row td{background:rgba(46,204,113,.05)}
+.winner-crown::before{content:'👑 '}
+
+/* EXPORT */
+.export-bar{display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap}
+.btn-export{padding:.4rem .875rem;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px;cursor:pointer;transition:.15s}
+.btn-export:hover{border-color:var(--etsy);color:var(--etsy)}
+
+/* ATTRIBUTION */
+.etsy-attr{font-size:10px;color:var(--faint);margin-top:.5rem}
+.etsy-attr a{color:var(--etsy);text-decoration:none}
+
+/* RESPONSIVE */
+@media(max-width:860px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{position:static;max-height:none}
+  .reasons-row,.subscores-grid{grid-template-columns:1fr 1fr}
+  .subniche-grid,.brief-grid,.mdata-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-mark">🔎</div>
+    <span>NicheScout<span class="logo-sub">by Éclozia</span></span>
+  </div>
+  <div class="topbar-right">
+    <select class="lang-sel" id="ui-lang" onchange="switchLang(this.value)">
+      <option value="en">🇬🇧 English</option>
+      <option value="fr">🇫🇷 Français</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="de">🇩🇪 Deutsch</option>
+      <option value="pt">🇧🇷 Português</option>
+    </select>
+    <span class="trial-badge" id="quota-badge">Trial — 5 analyses</span>
+  </div>
+</div>
+
+<div class="layout">
+<div class="sidebar">
+
+  <!-- Licence -->
+  <div class="license-box">
+    <div class="s-label" data-i18n="licLabel">License key</div>
+    <div class="lic-row">
+      <input class="s-input" id="lic-input" type="text" placeholder="XXXX-XXXX-XXXX-XXXX">
+      <button class="btn-verify" onclick="checkLicense()" data-i18n="licVerify">Verify</button>
+    </div>
+    <div class="lic-status" id="lic-status"></div>
+  </div>
+
+  <!-- Keyword -->
+  <div class="s-section">
+    <div class="s-label" data-i18n="kwLabel">🔍 Etsy niche keyword</div>
+    <div class="search-wrap">
+      <input class="s-input" id="keyword-input" type="text" data-i18n-ph="kwPh" placeholder="e.g. baby shower invitation digital" maxlength="80" oninput="onKeywordChange()">
+      <span class="search-icon">↵</span>
+    </div>
+  </div>
+
+  <!-- Language -->
+  <div class="s-section">
+    <div class="s-label" data-i18n="langLabel">Analysis language</div>
+    <select class="s-input" id="analysis-lang">
+      <option value="en">English</option>
+      <option value="fr">Français</option>
+      <option value="es">Español</option>
+      <option value="de">Deutsch</option>
+      <option value="pt">Português</option>
+    </select>
+  </div>
+
+  <!-- Toggles -->
+  <div class="s-section">
+    <div class="s-label" data-i18n="optLabel">Options</div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-lbl" data-i18n="digitalToggle">Digital products only</div>
+        <div class="toggle-sub" data-i18n="digitalSub">Templates, planners, ebooks…</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="digital-only" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-lbl" data-i18n="manualToggle">Add manual data</div>
+        <div class="toggle-sub" data-i18n="manualSub">Enrich with your observations</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="manual-toggle" onchange="toggleManual(this.checked)"><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+
+  <!-- Manual data -->
+  <div class="manual-section s-section" id="manual-section">
+    <div class="s-label" data-i18n="manualLabel">Your Etsy observations</div>
+    <div class="manual-grid">
+      <div class="m-field">
+        <div class="m-label" data-i18n="mResults">Results count</div>
+        <input class="m-input" type="number" id="m-results" placeholder="e.g. 3200" min="0">
+      </div>
+      <div class="m-field">
+        <div class="m-label" data-i18n="mPrice">Avg price ($)</div>
+        <input class="m-input" type="number" id="m-price" placeholder="e.g. 8" min="0" step="0.5">
+      </div>
+    </div>
+    <div class="m-field" style="margin-top:.5rem">
+      <div class="m-label" data-i18n="mCompetition">Competition level</div>
+      <select class="m-input" id="m-competition">
+        <option value="low" data-i18n="compLow">Low — few dominant sellers</option>
+        <option value="medium" selected data-i18n="compMed">Medium</option>
+        <option value="high" data-i18n="compHigh">High — saturated</option>
+      </select>
+    </div>
+    <div class="toggle-row" style="margin-top:.5rem">
+      <div class="toggle-lbl" data-i18n="mSmallSellers">Small sellers present</div>
+      <label class="toggle"><input type="checkbox" id="m-small-sellers" checked><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+
+  <!-- Compare slots -->
+  <div class="compare-wrap s-section" id="compare-wrap">
+    <div class="s-label" data-i18n="compareLabel">Compare niches</div>
+    <div id="compare-slots"></div>
+    <button class="btn-secondary" onclick="runCompare()" data-i18n="compareBtn">Compare selected →</button>
+  </div>
+
+  <!-- CTA -->
+  <button class="btn-primary" id="btn-analyse" onclick="runAnalysis()" disabled data-i18n="analyseBtn">
+    Analyse niche →
+  </button>
+  <div class="notice" data-i18n="costNotice">1 credit per niche analysis</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main" id="main-content">
+
+  <div class="state state-empty active" id="state-empty">
+    <div class="icon">🏪</div>
+    <h3 data-i18n="emptyTitle">Find your next Etsy niche</h3>
+    <p data-i18n="emptyDesc">Type a keyword to get a GO / TEST / NO GO verdict,<br>10 sub-niches, small seller wins, and a creation brief.</p>
+  </div>
+
+  <div class="state state-loading" id="state-loading">
+    <div class="spinner"></div>
+    <div class="load-step" id="load-step" data-i18n="loadStep">Searching Etsy listings…</div>
+    <div style="font-size:12px;color:var(--muted)" data-i18n="loadNote">Usually 15–30 seconds</div>
+  </div>
+
+  <div id="state-results"></div>
+
+</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// i18n
+// ════════════════════════════════════════════════════════════
+const I18N = {
+  en:{
+    licLabel:'License key', licVerify:'Verify',
+    kwLabel:'🔍 Etsy niche keyword', kwPh:'e.g. baby shower invitation digital',
+    langLabel:'Analysis language', optLabel:'Options',
+    digitalToggle:'Digital products only', digitalSub:'Templates, planners, ebooks…',
+    manualToggle:'Add manual data', manualSub:'Enrich with your observations',
+    manualLabel:'Your Etsy observations', mResults:'Results count',
+    mPrice:'Avg price ($)', mCompetition:'Competition level',
+    compLow:'Low — few dominant sellers', compMed:'Medium', compHigh:'High — saturated',
+    mSmallSellers:'Small sellers present',
+    compareLabel:'Compare niches', compareBtn:'Compare selected →',
+    analyseBtn:'Analyse niche →', costNotice:'1 credit per niche analysis',
+    emptyTitle:'Find your next Etsy niche',
+    emptyDesc:'Type a keyword to get a GO / TEST / NO GO verdict,\n10 sub-niches, small seller wins, and a creation brief.',
+    loadStep:'Searching Etsy listings…', loadNote:'Usually 15–30 seconds',
+    verdictGo:'GO', verdictTest:'TEST', verdictNogo:'NO GO',
+    confHigh:'High confidence', confMedium:'Medium confidence', confLow:'Low confidence',
+    tabVerdict:'🎯 Verdict', tabSubniches:'🔍 Sub-niches', tabWins:'🏆 Small Wins',
+    tabBrief:'✍️ Brief', tabMarket:'📊 Market', tabCompare:'⚖️ Compare',
+    opportunityScore:'Opportunity', demand:'Demand proxy', accessibility:'Accessibility',
+    weakness:'Competitive gap', margin:'Margin', diversity:'Diversity', freshness:'Freshness',
+    verdictReasons:'Why this score', subNicheTitle:'10 Sub-niche suggestions',
+    subNicheHint:'Click to select up to 3 for comparison',
+    smallWinsTitle:'Small Seller Wins', smallWinsDesc:'Accessible listings observed in this niche',
+    briefTitle:'Creation Brief — Rebuild, don\'t copy',
+    concept:'Product concept', audience:'Target audience', occasion:'Occasion / use case',
+    style:'Visual style', format:'Format / files', usp:'Unique selling point',
+    assetsTitle:'Assets to create', tagsTitle:'13 tag candidates', clickCopy:'Click to copy',
+    checklistTitle:'Pre-publish checklist', trademarkNote:'Trademark warning',
+    marketTitle:'Market data', totalListings:'Total results', analyzed:'Analyzed',
+    medianPrice:'Median price', smallShops:'Small shops',
+    sampleTitle:'Sample top listings', favorites:'favs', digitalLabel:'digital',
+    apiErrorMsg:'Etsy API not yet active — analysis based on manual data only.',
+    exportBrief:'Export brief', exportJSON:'Export JSON', exportTags:'Copy all tags',
+    saveCompare:'Save to compare', seasonNote:'Seasonality',
+    compareTitle:'Niche comparison', winner:'Recommended niche',
+    noData:'—', powered:'Data from',
+  },
+  fr:{
+    licLabel:'Clé de licence', licVerify:'Vérifier',
+    kwLabel:'🔍 Mot-clé niche Etsy', kwPh:'ex. invitation baby shower numérique',
+    langLabel:'Langue d\'analyse', optLabel:'Options',
+    digitalToggle:'Produits numériques uniquement', digitalSub:'Modèles, planners, ebooks…',
+    manualToggle:'Ajouter données manuelles', manualSub:'Enrichir avec vos observations',
+    manualLabel:'Vos observations Etsy', mResults:'Nb de résultats',
+    mPrice:'Prix moyen ($)', mCompetition:'Niveau de concurrence',
+    compLow:'Faible — peu de vendeurs dominants', compMed:'Moyen', compHigh:'Élevé — saturé',
+    mSmallSellers:'Petits vendeurs présents',
+    compareLabel:'Comparer des niches', compareBtn:'Comparer →',
+    analyseBtn:'Analyser la niche →', costNotice:'1 crédit par analyse de niche',
+    emptyTitle:'Trouvez votre prochaine niche Etsy',
+    emptyDesc:'Saisissez un mot-clé pour obtenir un verdict GO / TEST / NO GO,\n10 sous-niches, opportunités accessibles et un brief de création.',
+    loadStep:'Recherche des listings Etsy…', loadNote:'Généralement 15–30 secondes',
+    verdictGo:'GO', verdictTest:'TEST', verdictNogo:'NO GO',
+    confHigh:'Confiance élevée', confMedium:'Confiance moyenne', confLow:'Confiance faible',
+    tabVerdict:'🎯 Verdict', tabSubniches:'🔍 Sous-niches', tabWins:'🏆 Opportunités',
+    tabBrief:'✍️ Brief', tabMarket:'📊 Marché', tabCompare:'⚖️ Comparer',
+    opportunityScore:'Opportunité', demand:'Proxy demande', accessibility:'Accessibilité',
+    weakness:'Faiblesse concurrentielle', margin:'Marge', diversity:'Diversité', freshness:'Fraîcheur',
+    verdictReasons:'Pourquoi ce score', subNicheTitle:'10 suggestions de sous-niches',
+    subNicheHint:'Cliquer pour sélectionner jusqu\'à 3 à comparer',
+    smallWinsTitle:'Opportunités accessibles', smallWinsDesc:'Listings accessibles observés dans cette niche',
+    briefTitle:'Brief de création — Reconstruire, pas copier',
+    concept:'Concept produit', audience:'Audience cible', occasion:'Occasion / cas d\'usage',
+    style:'Style visuel', format:'Format / fichiers', usp:'Proposition de valeur unique',
+    assetsTitle:'Assets à créer', tagsTitle:'13 tags candidats', clickCopy:'Cliquer pour copier',
+    checklistTitle:'Checklist avant publication', trademarkNote:'Avertissement marque',
+    marketTitle:'Données marché', totalListings:'Résultats totaux', analyzed:'Analysés',
+    medianPrice:'Prix médian', smallShops:'Petites boutiques',
+    sampleTitle:'Exemples de listings', favorites:'favs', digitalLabel:'numérique',
+    apiErrorMsg:'API Etsy en attente d\'activation — analyse sur données manuelles uniquement.',
+    exportBrief:'Exporter le brief', exportJSON:'Exporter JSON', exportTags:'Copier tous les tags',
+    saveCompare:'Sauvegarder pour comparer', seasonNote:'Saisonnalité',
+    compareTitle:'Comparaison de niches', winner:'Niche recommandée',
+    noData:'—', powered:'Données via',
+  },
+  es:{
+    licLabel:'Clave de licencia', licVerify:'Verificar',
+    kwLabel:'🔍 Palabra clave de nicho Etsy', kwPh:'ej. invitación baby shower digital',
+    langLabel:'Idioma de análisis', optLabel:'Opciones',
+    digitalToggle:'Solo productos digitales', digitalSub:'Plantillas, planners, ebooks…',
+    manualToggle:'Agregar datos manuales', manualSub:'Enriquecer con tus observaciones',
+    manualLabel:'Tus observaciones Etsy', mResults:'Cantidad de resultados',
+    mPrice:'Precio promedio ($)', mCompetition:'Nivel de competencia',
+    compLow:'Bajo — pocos vendedores dominantes', compMed:'Medio', compHigh:'Alto — saturado',
+    mSmallSellers:'Vendedores pequeños presentes',
+    compareLabel:'Comparar nichos', compareBtn:'Comparar →',
+    analyseBtn:'Analizar nicho →', costNotice:'1 crédito por análisis de nicho',
+    emptyTitle:'Encuentra tu próximo nicho Etsy',
+    emptyDesc:'Escribe una palabra clave para obtener un veredicto GO / TEST / NO GO,\n10 subnichos, victorias de vendedores pequeños y un brief de creación.',
+    loadStep:'Buscando listings de Etsy…', loadNote:'Generalmente 15–30 segundos',
+    verdictGo:'GO', verdictTest:'TEST', verdictNogo:'NO GO',
+    confHigh:'Alta confianza', confMedium:'Confianza media', confLow:'Baja confianza',
+    tabVerdict:'🎯 Veredicto', tabSubniches:'🔍 Subnichos', tabWins:'🏆 Oportunidades',
+    tabBrief:'✍️ Brief', tabMarket:'📊 Mercado', tabCompare:'⚖️ Comparar',
+    opportunityScore:'Oportunidad', demand:'Proxy de demanda', accessibility:'Accesibilidad',
+    weakness:'Brecha competitiva', margin:'Margen', diversity:'Diversidad', freshness:'Frescura',
+    verdictReasons:'Por qué este puntaje', subNicheTitle:'10 sugerencias de subnichos',
+    subNicheHint:'Haz clic para seleccionar hasta 3 para comparar',
+    smallWinsTitle:'Victorias de vendedores pequeños', smallWinsDesc:'Listings accesibles observados',
+    briefTitle:'Brief de creación — Reconstruir, no copiar',
+    concept:'Concepto de producto', audience:'Audiencia objetivo', occasion:'Ocasión / caso de uso',
+    style:'Estilo visual', format:'Formato / archivos', usp:'Propuesta de valor única',
+    assetsTitle:'Assets a crear', tagsTitle:'13 tags candidatos', clickCopy:'Clic para copiar',
+    checklistTitle:'Lista de verificación antes de publicar', trademarkNote:'Advertencia de marca',
+    marketTitle:'Datos de mercado', totalListings:'Resultados totales', analyzed:'Analizados',
+    medianPrice:'Precio mediano', smallShops:'Tiendas pequeñas',
+    sampleTitle:'Listings de muestra', favorites:'favs', digitalLabel:'digital',
+    apiErrorMsg:'API Etsy en espera de activación — análisis basado en datos manuales.',
+    exportBrief:'Exportar brief', exportJSON:'Exportar JSON', exportTags:'Copiar todos los tags',
+    saveCompare:'Guardar para comparar', seasonNote:'Estacionalidad',
+    compareTitle:'Comparación de nichos', winner:'Nicho recomendado',
+    noData:'—', powered:'Datos de',
+  },
+  de:{
+    licLabel:'Lizenzschlüssel', licVerify:'Prüfen',
+    kwLabel:'🔍 Etsy-Nischen-Keyword', kwPh:'z.B. Babyparty Einladung digital',
+    langLabel:'Analysesprache', optLabel:'Optionen',
+    digitalToggle:'Nur digitale Produkte', digitalSub:'Vorlagen, Planer, E-Books…',
+    manualToggle:'Manuelle Daten hinzufügen', manualSub:'Mit eigenen Beobachtungen anreichern',
+    manualLabel:'Ihre Etsy-Beobachtungen', mResults:'Anzahl Ergebnisse',
+    mPrice:'Durchschnittspreis ($)', mCompetition:'Wettbewerbsniveau',
+    compLow:'Niedrig — wenige dominierende Verkäufer', compMed:'Mittel', compHigh:'Hoch — gesättigt',
+    mSmallSellers:'Kleine Verkäufer vorhanden',
+    compareLabel:'Nischen vergleichen', compareBtn:'Ausgewählte vergleichen →',
+    analyseBtn:'Nische analysieren →', costNotice:'1 Kredit pro Nischenanalyse',
+    emptyTitle:'Finden Sie Ihre nächste Etsy-Nische',
+    emptyDesc:'Geben Sie ein Keyword ein für ein GO / TEST / NO GO-Urteil,\n10 Unternischen, Chancen für kleine Verkäufer und ein Erstellungs-Brief.',
+    loadStep:'Etsy-Listings werden gesucht…', loadNote:'Normalerweise 15–30 Sekunden',
+    verdictGo:'GO', verdictTest:'TEST', verdictNogo:'NO GO',
+    confHigh:'Hohe Konfidenz', confMedium:'Mittlere Konfidenz', confLow:'Niedrige Konfidenz',
+    tabVerdict:'🎯 Urteil', tabSubniches:'🔍 Unternischen', tabWins:'🏆 Chancen',
+    tabBrief:'✍️ Brief', tabMarket:'📊 Markt', tabCompare:'⚖️ Vergleich',
+    opportunityScore:'Chance', demand:'Nachfrage-Proxy', accessibility:'Zugänglichkeit',
+    weakness:'Wettbewerbslücke', margin:'Marge', diversity:'Vielfalt', freshness:'Aktualität',
+    verdictReasons:'Warum dieser Score', subNicheTitle:'10 Unternischen-Vorschläge',
+    subNicheHint:'Klicken um bis zu 3 zum Vergleich auszuwählen',
+    smallWinsTitle:'Chancen für kleine Verkäufer', smallWinsDesc:'Zugängliche Listings beobachtet',
+    briefTitle:'Erstellungs-Brief — Neu aufbauen, nicht kopieren',
+    concept:'Produktkonzept', audience:'Zielgruppe', occasion:'Anlass / Verwendungszweck',
+    style:'Visueller Stil', format:'Format / Dateien', usp:'Alleinstellungsmerkmal',
+    assetsTitle:'Zu erstellende Assets', tagsTitle:'13 Tag-Kandidaten', clickCopy:'Klicken zum Kopieren',
+    checklistTitle:'Checkliste vor Veröffentlichung', trademarkNote:'Markenwarnung',
+    marketTitle:'Marktdaten', totalListings:'Gesamtergebnisse', analyzed:'Analysiert',
+    medianPrice:'Medianpreis', smallShops:'Kleine Shops',
+    sampleTitle:'Beispiel-Listings', favorites:'Favs', digitalLabel:'digital',
+    apiErrorMsg:'Etsy API noch nicht aktiv — Analyse nur auf Basis manueller Daten.',
+    exportBrief:'Brief exportieren', exportJSON:'JSON exportieren', exportTags:'Alle Tags kopieren',
+    saveCompare:'Zum Vergleich speichern', seasonNote:'Saisonalität',
+    compareTitle:'Nischenvergleich', winner:'Empfohlene Nische',
+    noData:'—', powered:'Daten von',
+  },
+  pt:{
+    licLabel:'Chave de licença', licVerify:'Verificar',
+    kwLabel:'🔍 Palavra-chave de nicho Etsy', kwPh:'ex. convite chá de bebê digital',
+    langLabel:'Idioma da análise', optLabel:'Opções',
+    digitalToggle:'Apenas produtos digitais', digitalSub:'Modelos, planners, ebooks…',
+    manualToggle:'Adicionar dados manuais', manualSub:'Enriquecer com suas observações',
+    manualLabel:'Suas observações Etsy', mResults:'Quantidade de resultados',
+    mPrice:'Preço médio ($)', mCompetition:'Nível de concorrência',
+    compLow:'Baixo — poucos vendedores dominantes', compMed:'Médio', compHigh:'Alto — saturado',
+    mSmallSellers:'Pequenos vendedores presentes',
+    compareLabel:'Comparar nichos', compareBtn:'Comparar →',
+    analyseBtn:'Analisar nicho →', costNotice:'1 crédito por análise de nicho',
+    emptyTitle:'Encontre seu próximo nicho Etsy',
+    emptyDesc:'Digite uma palavra-chave para obter um veredicto GO / TEST / NO GO,\n10 sub-nichos, vitórias de pequenos vendedores e um brief de criação.',
+    loadStep:'Buscando listings do Etsy…', loadNote:'Geralmente 15–30 segundos',
+    verdictGo:'GO', verdictTest:'TEST', verdictNogo:'NO GO',
+    confHigh:'Alta confiança', confMedium:'Confiança média', confLow:'Baixa confiança',
+    tabVerdict:'🎯 Veredicto', tabSubniches:'🔍 Sub-nichos', tabWins:'🏆 Oportunidades',
+    tabBrief:'✍️ Brief', tabMarket:'📊 Mercado', tabCompare:'⚖️ Comparar',
+    opportunityScore:'Oportunidade', demand:'Proxy de demanda', accessibility:'Acessibilidade',
+    weakness:'Brecha competitiva', margin:'Margem', diversity:'Diversidade', freshness:'Atualidade',
+    verdictReasons:'Por que esta pontuação', subNicheTitle:'10 sugestões de sub-nichos',
+    subNicheHint:'Clique para selecionar até 3 para comparar',
+    smallWinsTitle:'Vitórias de pequenos vendedores', smallWinsDesc:'Listings acessíveis observados',
+    briefTitle:'Brief de criação — Reconstruir, não copiar',
+    concept:'Conceito do produto', audience:'Público-alvo', occasion:'Ocasião / caso de uso',
+    style:'Estilo visual', format:'Formato / arquivos', usp:'Proposta de valor única',
+    assetsTitle:'Assets a criar', tagsTitle:'13 tags candidatos', clickCopy:'Clique para copiar',
+    checklistTitle:'Checklist antes de publicar', trademarkNote:'Aviso de marca registrada',
+    marketTitle:'Dados de mercado', totalListings:'Resultados totais', analyzed:'Analisados',
+    medianPrice:'Preço mediano', smallShops:'Lojas pequenas',
+    sampleTitle:'Listings de amostra', favorites:'favs', digitalLabel:'digital',
+    apiErrorMsg:'API Etsy aguardando ativação — análise com dados manuais apenas.',
+    exportBrief:'Exportar brief', exportJSON:'Exportar JSON', exportTags:'Copiar todas as tags',
+    saveCompare:'Salvar para comparar', seasonNote:'Sazonalidade',
+    compareTitle:'Comparação de nichos', winner:'Nicho recomendado',
+    noData:'—', powered:'Dados via',
+  },
+};
+
+// ════════════════════════════════════════════════════════════
+// State
+// ════════════════════════════════════════════════════════════
+const SERVER = 'https://kdp-serveur.onrender.com';
+let uiLang  = 'en';
+let lastResult = null;
+let savedNiches = [];
+let activeTab = 'verdict';
+let checkedItems = new Set();
+let deviceId = localStorage.getItem('eni_device') || ('eni-' + Math.random().toString(36).slice(2,10));
+localStorage.setItem('eni_device', deviceId);
+
+const t = k => (I18N[uiLang] || I18N.en)[k] || k;
+
+// ════════════════════════════════════════════════════════════
+// i18n apply
+// ════════════════════════════════════════════════════════════
+function switchLang(lang) {
+  uiLang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = I18N[lang]?.[el.dataset.i18n];
+    if (v) el.textContent = v;
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const v = I18N[lang]?.[el.dataset.i18nPh];
+    if (v) el.placeholder = v;
+  });
+  if (lastResult) renderResults(lastResult);
+}
+
+// ════════════════════════════════════════════════════════════
+// UI helpers
+// ════════════════════════════════════════════════════════════
+function showState(s) {
+  document.getElementById('state-empty').className    = 'state state-empty'   + (s==='empty'   ? ' active':'');
+  document.getElementById('state-loading').className  = 'state state-loading' + (s==='loading' ? ' active':'');
+  document.getElementById('state-results').className  = s==='results' ? 'active' : '';
+}
+function onKeywordChange() {
+  const v = document.getElementById('keyword-input').value.trim();
+  document.getElementById('btn-analyse').disabled = v.length < 2;
+}
+function toggleManual(on) {
+  document.getElementById('manual-section').classList.toggle('visible', on);
+}
+function scoreColor(s) { return s>=65?'ss-green':s>=40?'ss-orange':'ss-red'; }
+function fillColor(s) { return s>=65?'ss-fill-green':s>=40?'ss-fill-orange':'ss-fill-red'; }
+function verdictClass(v) { return {go:'vb-go',test:'vb-test',nogo:'vb-nogo'}[v]||'vb-test'; }
+function verdictIcon(v) { return {go:'✅',test:'🔶',nogo:'❌'}[v]||'🔶'; }
+function confClass(c) { return {high:'conf-high',medium:'conf-medium',low:'conf-low'}[c]||'conf-medium'; }
+
+// ════════════════════════════════════════════════════════════
+// License
+// ════════════════════════════════════════════════════════════
+async function checkLicense() {
+  const key = document.getElementById('lic-input').value.trim();
+  const el  = document.getElementById('lic-status');
+  if (!key) return;
+  el.textContent = '⏳…';
+  try {
+    const r = await fetch(SERVER+'/check-license',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({licenseKey:key,deviceId,product:'eni'})});
+    const d = await r.json();
+    if(d.valid){
+      el.innerHTML = `<span style="color:var(--green)">✓ Active — ${d.remaining} analyses</span>`;
+      document.getElementById('quota-badge').textContent = `${d.remaining} analyses`;
+    } else {
+      el.innerHTML = `<span style="color:var(--red)">✗ ${d.reason||'Invalid'}</span>`;
+    }
+  } catch { el.innerHTML = `<span style="color:var(--red)">✗ Connection error</span>`; }
+}
+
+// ════════════════════════════════════════════════════════════
+// Analysis
+// ════════════════════════════════════════════════════════════
+async function runAnalysis() {
+  const keyword = document.getElementById('keyword-input').value.trim();
+  if (keyword.length < 2) return;
+
+  const digitalOnly = document.getElementById('digital-only').checked;
+  const lang        = document.getElementById('analysis-lang').value;
+  const manualOn    = document.getElementById('manual-toggle').checked;
+  const manualData  = manualOn ? {
+    estimatedResults: parseInt(document.getElementById('m-results').value)||0,
+    avgPrice:         parseFloat(document.getElementById('m-price').value)||0,
+    competitionLevel: document.getElementById('m-competition').value,
+    hasSmallSellers:  document.getElementById('m-small-sellers').checked,
+    minPrice:         parseFloat(document.getElementById('m-price').value)||5,
+  } : {};
+
+  showState('loading');
+  checkedItems.clear();
+  const steps = [t('loadStep'),'🔬 Computing scores…','🤖 AI generating sub-niches…','✍️ Building creation brief…'];
+  let si = 0;
+  const iv = setInterval(()=>{ if(si<steps.length-1) si++; document.getElementById('load-step').textContent=steps[si]; },7000);
+
+  try {
+    const res = await fetch(SERVER+'/eni/analyse',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ deviceId, licenseKey:document.getElementById('lic-input').value.trim()||null, keyword, lang, digitalOnly, manualData })
+    });
+    clearInterval(iv);
+    const data = await res.json();
+    if(!res.ok||data.error){ showError(data.message||data.error); return; }
+    lastResult = data;
+    renderResults(data);
+    addToCompare(data);
+  } catch(e) { clearInterval(iv); showError('Connection error: '+e.message); }
+}
+
+function showError(msg) {
+  showState('empty');
+  document.getElementById('state-empty').innerHTML =
+    `<div class="icon">⚠️</div><h3>Error</h3><p style="color:var(--red);max-width:400px">${msg}</p>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// Render
+// ════════════════════════════════════════════════════════════
+function renderResults(d) {
+  showState('results');
+  const { verdict, scores, reports, market, keyword } = d;
+  const vc = verdictClass(verdict);
+  const vi = verdictIcon(verdict);
+  const vl = t('verdict'+verdict.charAt(0).toUpperCase()+verdict.slice(1));
+
+  const tabs = ['verdict','subniches','wins','brief','market'];
+  if(savedNiches.length>=2) tabs.push('compare');
+
+  document.getElementById('state-results').innerHTML = `
+    <!-- VERDICT BANNER -->
+    <div class="verdict-banner ${vc}">
+      <div class="vb-icon">${vi}</div>
+      <div class="vb-right">
+        <div class="vb-label">${vl}</div>
+        <div class="vb-keyword">${keyword}</div>
+        <div class="vb-summary">${reports.summary||''}</div>
+        ${market.apiError?`<div style="font-size:11px;color:var(--orange);margin-top:.375rem">⚠️ ${t('apiErrorMsg')}</div>`:''}
+      </div>
+      <div class="vb-score">
+        <div class="score-big">${scores.opportunity}</div>
+        <div class="score-lbl">${t('opportunityScore')}</div>
+        <div class="conf-pill ${confClass(scores.confidence)}">${t('conf'+scores.confidence.charAt(0).toUpperCase()+scores.confidence.slice(1))}</div>
+      </div>
+    </div>
+
+    <!-- SUB-SCORES -->
+    <div class="subscores-grid">
+      ${renderSubscore(t('demand'),        scores.subscores.demand)}
+      ${renderSubscore(t('accessibility'), scores.subscores.accessibility)}
+      ${renderSubscore(t('weakness'),      scores.subscores.weakness)}
+      ${renderSubscore(t('margin'),        scores.subscores.margin)}
+      ${renderSubscore(t('diversity'),     scores.subscores.diversity)}
+      ${renderSubscore(t('freshness'),     scores.subscores.freshness)}
+    </div>
+
+    <!-- TABS -->
+    <div class="rtabs">
+      ${tabs.map(k=>`<div class="rtab${k===activeTab?' active':''}" onclick="switchTab('${k}')">${t('tab'+k.charAt(0).toUpperCase()+k.slice(1))}</div>`).join('')}
+    </div>
+
+    <!-- PANELS -->
+    <div id="panel-verdict"   class="rpanel${activeTab==='verdict'   ?'active':''}">${renderVerdict(reports, scores)}</div>
+    <div id="panel-subniches" class="rpanel${activeTab==='subniches' ?'active':''}">${renderSubniches(reports.subNiches)}</div>
+    <div id="panel-wins"      class="rpanel${activeTab==='wins'      ?'active':''}">${renderWins(reports.smallSellerWins)}</div>
+    <div id="panel-brief"     class="rpanel${activeTab==='brief'     ?'active':''}">${renderBrief(reports.creationBrief, reports.seasonalityNote)}</div>
+    <div id="panel-market"    class="rpanel${activeTab==='market'    ?'active':''}">${renderMarket(market, scores.meta)}</div>
+    ${savedNiches.length>=2?`<div id="panel-compare" class="rpanel${activeTab==='compare'?'active':''}" id="panel-compare"><div style="color:var(--muted);padding:1rem">${t('compareTitle')} — run compare from sidebar</div></div>`:''}
+
+    <!-- EXPORT -->
+    <div class="export-bar">
+      <button class="btn-export" onclick="exportJSON()">${t('exportJSON')}</button>
+      <button class="btn-export" onclick="exportBrief()">${t('exportBrief')}</button>
+    </div>
+    <div class="etsy-attr">Listing data: <a href="https://etsy.com" target="_blank">Etsy.com</a> via Open API v3 · ${new Date(market.fetchedAt).toLocaleDateString()}</div>
+  `;
+  // Fix panel active classes
+  document.querySelectorAll('.rpanel').forEach((el,i)=>{
+    el.className='rpanel'+(el.id==='panel-'+activeTab?' active':'');
+  });
+}
+
+function renderSubscore(label, val) {
+  const c = scoreColor(val); const fc = fillColor(val);
+  return `<div class="subscore-card">
+    <div class="ss-label">${label}</div>
+    <div class="ss-val ${c}">${val}</div>
+    <div class="ss-bar"><div class="ss-fill ${fc}" style="width:${val}%"></div></div>
+  </div>`;
+}
+
+function renderVerdict(reports, scores) {
+  const reasons = (reports.verdictReasons||[]).map(r=>`<div class="reason-card">${r}</div>`).join('');
+  return `
+    <div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.625rem">${t('verdictReasons')}</div>
+    <div class="reasons-row">${reasons}</div>
+    <button class="btn-secondary" style="width:auto;padding:.4rem .875rem;font-size:12px" onclick="addToCompare(lastResult)">${t('saveCompare')}</button>
+  `;
+}
+
+function renderSubniches(items) {
+  if(!items?.length) return `<p style="color:var(--muted)">${t('noData')}</p>`;
+  const cards = items.map((sn,i)=>`
+    <div class="sn-card" id="sn-${i}" onclick="toggleSubniche(${i})">
+      <div class="sn-angle">${sn.angle||''}</div>
+      <div class="sn-kw">${sn.keyword||''}</div>
+      <div class="sn-desc">${sn.description||''}</div>
+      ${sn.digital_friendly?`<span class="digital-badge">${t('digitalLabel')}</span>`:''}
+      <div class="sn-score">${sn.estimated_score||0}</div>
+    </div>
+  `).join('');
+  return `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:.75rem">${t('subNicheHint')}</div>
+    <div class="subniche-grid">${cards}</div>
+  `;
+}
+let selectedSubniches = new Set();
+function toggleSubniche(i) {
+  if(selectedSubniches.has(i)) { selectedSubniches.delete(i); document.getElementById('sn-'+i).classList.remove('selected'); }
+  else if(selectedSubniches.size<3) { selectedSubniches.add(i); document.getElementById('sn-'+i).classList.add('selected'); }
+}
+
+function renderWins(items) {
+  if(!items?.length) return `<p style="color:var(--muted)">${t('noData')}</p>`;
+  return `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:.75rem">${t('smallWinsDesc')}</div>
+    <div class="ssw-list">${items.map(w=>`<div class="ssw-item">${w}</div>`).join('')}</div>
+  `;
+}
+
+function renderBrief(brief, seasonNote) {
+  if(!brief||!brief.concept) return `<p style="color:var(--muted)">${t('noData')}</p>`;
+  const tags = (brief.tags_candidates||[]).map((tag,i)=>`
+    <span class="tag-pill" id="tag-${i}" onclick="copyTag(${i},'${tag.replace(/'/g,'\\'')}','tag-${i}')">${tag}</span>
+  `).join('');
+  const assets = (brief.assets_to_create||[]).map(a=>`<div class="asset-item">${a}</div>`).join('');
+  const cl = (brief.pre_publish_checklist||[]).map((item,i)=>`
+    <div class="cl-item">
+      <div class="cl-check" id="cl-${i}" onclick="toggleCheck(${i})"></div>
+      <span>${item}</span>
+    </div>
+  `).join('');
+
+  return `
+    <div class="brief-hero">
+      <div style="font-size:11px;font-weight:500;color:var(--etsy);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.375rem">${t('briefTitle')}</div>
+      <div class="brief-concept">${brief.concept||''}</div>
+      ${brief.usp?`<div class="brief-usp"><strong>${t('usp')} :</strong> ${brief.usp}</div>`:''}
+    </div>
+    <div class="brief-grid">
+      ${brief.target_audience?`<div class="brief-cell"><div class="bc-label">${t('audience')}</div><div class="bc-val">${brief.target_audience}</div></div>`:''}
+      ${brief.occasion?`<div class="brief-cell"><div class="bc-label">${t('occasion')}</div><div class="bc-val">${brief.occasion}</div></div>`:''}
+      ${brief.style?`<div class="brief-cell"><div class="bc-label">${t('style')}</div><div class="bc-val">${brief.style}</div></div>`:''}
+      ${brief.format?`<div class="brief-cell"><div class="bc-label">${t('format')}</div><div class="bc-val">${brief.format}</div></div>`:''}
+    </div>
+    ${assets?`<div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.5rem">${t('assetsTitle')}</div><div class="assets-list" style="margin-bottom:1rem">${assets}</div>`:''}
+    <div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.375rem">${t('tagsTitle')} <span style="font-size:10px">(${t('clickCopy')})</span></div>
+    <div class="tags-cloud" style="margin-bottom:1rem">${tags}</div>
+    ${cl?`<div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.5rem">${t('checklistTitle')}</div><div class="checklist" style="margin-bottom:.875rem">${cl}</div>`:''}
+    ${brief.trademark_warning?`<div class="trademark-warn">⚠️ ${brief.trademark_warning}</div>`:''}
+    ${seasonNote?`<div style="margin-top:.875rem;font-size:12.5px;color:var(--muted)"><strong style="color:var(--text)">${t('seasonNote')} :</strong> ${seasonNote}</div>`:''}
+    <div class="export-bar">
+      <button class="btn-export" onclick="copyAllTags()">${t('exportTags')}</button>
+    </div>
+  `;
+}
+
+function renderMarket(market, meta) {
+  if(!meta) return `<p style="color:var(--muted)">${t('noData')}</p>`;
+  const samples = (market.sampleListings||[]).map(l=>`
+    <div class="sample-item">
+      <span class="si-title">${l.title}</span>
+      <div class="si-badges">
+        <span class="si-badge">$${l.price?.toFixed(2)||'?'}</span>
+        <span class="si-badge">♥ ${l.favorites||0}</span>
+        ${l.isDigital?`<span class="si-badge" style="color:var(--blue)">${t('digitalLabel')}</span>`:''}
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="mdata-grid">
+      <div class="mdata-cell"><div class="mdata-val">${(market.totalListings||0).toLocaleString()}</div><div class="mdata-lbl">${t('totalListings')}</div></div>
+      <div class="mdata-cell"><div class="mdata-val">${market.listingsAnalyzed||0}</div><div class="mdata-lbl">${t('analyzed')}</div></div>
+      <div class="mdata-cell"><div class="mdata-val">$${meta.medianPrice||'?'}</div><div class="mdata-lbl">${t('medianPrice')}</div></div>
+      <div class="mdata-cell"><div class="mdata-val">${meta.smallShopPct||0}%</div><div class="mdata-lbl">${t('smallShops')}</div></div>
+    </div>
+    ${samples?`<div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.5rem">${t('sampleTitle')}</div><div class="sample-list">${samples}</div>`:''}
+    <div class="etsy-attr" style="margin-top:.75rem">Etsy Open API v3 · ${new Date(market.fetchedAt).toLocaleDateString()}</div>
+  `;
+}
+
+// ════════════════════════════════════════════════════════════
+// Tab switch
+// ════════════════════════════════════════════════════════════
+function switchTab(k) {
+  activeTab = k;
+  document.querySelectorAll('.rtab').forEach(el=>{
+    const keys=['verdict','subniches','wins','brief','market','compare'];
+    const ki=keys.findIndex(x=>t('tab'+x.charAt(0).toUpperCase()+x.slice(1))===el.textContent||el.onclick?.toString().includes(`'${x}'`));
+    el.className='rtab';
+  });
+  document.querySelectorAll('.rtab').forEach(el=>{
+    if(el.getAttribute('onclick')?.includes(`'${k}'`)) el.classList.add('active');
+  });
+  document.querySelectorAll('.rpanel').forEach(el=>{
+    el.className='rpanel'+(el.id==='panel-'+k?' active':'');
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// Compare
+// ════════════════════════════════════════════════════════════
+function addToCompare(data) {
+  if(!data||savedNiches.find(n=>n.keyword===data.keyword)) return;
+  if(savedNiches.length>=3) { savedNiches.shift(); }
+  savedNiches.push(data);
+  updateCompareSlots();
+}
+function updateCompareSlots() {
+  const wrap = document.getElementById('compare-wrap');
+  const slots = document.getElementById('compare-slots');
+  if(savedNiches.length<1){wrap.classList.remove('visible');return;}
+  wrap.classList.add('visible');
+  slots.innerHTML = savedNiches.map((n,i)=>`
+    <div class="compare-slot">
+      <div><div class="cs-kw">${n.keyword}</div><div class="cs-score">${t('opportunityScore')}: ${n.scores?.opportunity}</div></div>
+      <button class="cs-rm" onclick="removeCompare(${i})">✕</button>
+    </div>
+  `).join('');
+}
+function removeCompare(i){savedNiches.splice(i,1);updateCompareSlots();}
+
+async function runCompare(){
+  if(savedNiches.length<2) return;
+  showState('loading');
+  document.getElementById('load-step').textContent='⚖️ Comparing niches…';
+  try{
+    const res=await fetch(SERVER+'/eni/compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,licenseKey:document.getElementById('lic-input').value.trim()||null,analyses:savedNiches,lang:document.getElementById('analysis-lang').value})});
+    const data=await res.json();
+    renderCompare(data);
+  }catch(e){showError('Compare error: '+e.message);}
+}
+
+function renderCompare(data){
+  showState('results');
+  const {analyses,winner,winnerReason,comparisonMatrix,combinedOpportunity}=data;
+  document.getElementById('state-results').innerHTML=`
+    <div style="font-size:20px;font-weight:600;margin-bottom:1rem">${t('compareTitle')}</div>
+    ${winner!==undefined?`<div class="verdict-banner vb-go" style="margin-bottom:1rem">
+      <div class="vb-icon">🏆</div>
+      <div class="vb-right">
+        <div class="vb-label">${t('winner')}</div>
+        <div class="vb-keyword">${analyses[winner]?.keyword||''}</div>
+        <div class="vb-summary">${winnerReason||''}</div>
+      </div>
+    </div>`:''}
+    <table class="compare-matrix">
+      <thead><tr><th>${t('opportunityScore')}</th>${analyses.map(a=>`<th>${a.keyword}</th>`).join('')}</tr></thead>
+      <tbody>
+        <tr><td>Score</td>${analyses.map((a,i)=>`<td${i===winner?' class="winner-row"':''}>${i===winner?'<span class="winner-crown">':''}<strong>${a.score}</strong>${i===winner?'</span>':''}</td>`).join('')}</tr>
+        ${(comparisonMatrix||[]).map(row=>`<tr><td>${row.dimension}</td>${(row.values||[]).map((v,i)=>`<td${i===winner?' class="winner-row"':''}>${v}</td>`).join('')}</tr>`).join('')}
+      </tbody>
+    </table>
+    ${combinedOpportunity?`<div class="ssw-item" style="margin-top:.875rem">💡 ${combinedOpportunity}</div>`:''}
+  `;
+}
+
+// ════════════════════════════════════════════════════════════
+// UX helpers
+// ════════════════════════════════════════════════════════════
+function copyTag(idx,tag,elId){
+  navigator.clipboard.writeText(tag).then(()=>{
+    const el=document.getElementById(elId);
+    if(el){el.classList.add('copied');el.textContent='✓ '+tag;setTimeout(()=>{el.classList.remove('copied');el.textContent=tag;},1500);}
+  });
+}
+function copyAllTags(){
+  if(!lastResult?.reports?.creationBrief?.tags_candidates) return;
+  const all=lastResult.reports.creationBrief.tags_candidates.join(', ');
+  navigator.clipboard.writeText(all);
+}
+function toggleCheck(i){
+  const el=document.getElementById('cl-'+i);
+  if(checkedItems.has(i)){checkedItems.delete(i);el.className='cl-check';el.textContent='';}
+  else{checkedItems.add(i);el.className='cl-check checked';el.textContent='✓';}
+}
+
+function exportJSON(){
+  if(!lastResult)return;
+  const b=new Blob([JSON.stringify(lastResult,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download=`nichescout_${lastResult.keyword?.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.json`;a.click();
+}
+function exportBrief(){
+  if(!lastResult?.reports?.creationBrief)return;
+  const b=lastResult.reports.creationBrief;
+  const txt=[
+    `NICHESCOUT CREATION BRIEF`,`Keyword: ${lastResult.keyword}`,`Score: ${lastResult.scores?.opportunity}/100`,`Verdict: ${lastResult.verdict?.toUpperCase()}`,``,
+    `CONCEPT: ${b.concept}`,`AUDIENCE: ${b.target_audience}`,`OCCASION: ${b.occasion}`,`STYLE: ${b.style}`,`FORMAT: ${b.format}`,`USP: ${b.usp}`,``,
+    `ASSETS TO CREATE:`,...(b.assets_to_create||[]).map((a,i)=>`  ${i+1}. ${a}`),``,
+    `13 TAG CANDIDATES:`,...(b.tags_candidates||[]).map((t,i)=>`  ${i+1}. ${t}`),``,
+    `PRE-PUBLISH CHECKLIST:`,...(b.pre_publish_checklist||[]).map((c,i)=>`  [ ] ${c}`),``,
+    `⚠️ ${b.trademark_warning||''}`,
+    ``,`Generated by NicheScout by Éclozia · ${new Date().toLocaleDateString()}`,
+  ].join('\n');
+  const bl=new Blob([txt],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(bl);
+  a.download=`brief_${lastResult.keyword?.replace(/\s+/g,'_')}.txt`;a.click();
+}
+
+// ════════════════════════════════════════════════════════════
+// Enter key
+// ════════════════════════════════════════════════════════════
+document.getElementById('keyword-input').addEventListener('keydown', e=>{
+  if(e.key==='Enter'&&!document.getElementById('btn-analyse').disabled) runAnalysis();
+});
+
+showState('empty');
+</script>
+</body>
+</html>
