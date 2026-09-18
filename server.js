@@ -29,6 +29,7 @@ const { generate } = require("./aiprovider");
 const { checkLicense } = require("./license");
 const store = require("./store");
 const lof = require("./lof");
+const eni = require("./eni");
 
 const app = express();
 app.set("trust proxy", true); // Render est derrière un proxy -> vraie IP dans X-Forwarded-For
@@ -362,8 +363,9 @@ app.post("/analyse", async (req, res) => {
 });
 
 /* =======================================================================
-   LOF — Local Opportunity Finder
+   ENI — Etsy Niche Intelligence (NicheScout)
    ======================================================================= */
+app.use("/eni", eni);
 
 // Liste des playbooks (pour l'extension)
 app.get("/lof/playbooks", (_req, res) => {
