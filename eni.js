@@ -1,22 +1,18 @@
 // ============================================================
-// eni.js — Etsy Niche Intelligence · module serveur NicheScout
-// Ajouter dans server.js : app.use('/eni', require('./eni'));
-// Variables Render requises : ETSY_API_KEY
+// eni.js — Etsy Niche Intelligence · NicheScout
+// Monté dans server.js : app.use('/eni', require('./eni'))
 // ============================================================
 
-const express = require('express');
-const router  = express.Router();
-const https   = require('https');
-const { callAI } = require('./aiprovider');
+const express  = require('express');
+const https    = require('https');
+const router   = express.Router();
 
-// ── Config ────────────────────────────────────────────────────
-const ETSY_API_KEY   = process.env.ETSY_API_KEY || '';
-const ETSY_BASE      = 'https://openapi.etsy.com/v3/application';
-const CACHE_TTL_MS   = 60 * 60 * 1000;   // 1h cache mémoire
-const MAX_LISTINGS   = 20;                // par requête API Etsy
-const MIN_LISTINGS   = 5;                 // seuil confiance faible
+const ETSY_API_KEY = process.env.ETSY_API_KEY || '';
+const ETSY_BASE    = 'https://openapi.etsy.com/v3/application';
+const CACHE_TTL_MS = 60 * 60 * 1000;
+const MAX_LISTINGS = 20;
+const MIN_LISTINGS = 5;
 
-// Cache mémoire simple (Redis optionnel en V1.1)
 const _cache = new Map();
 function cacheGet(k) {
   const e = _cache.get(k);
@@ -24,156 +20,112 @@ function cacheGet(k) {
   if (Date.now() - e.ts > CACHE_TTL_MS) { _cache.delete(k); return null; }
   return e.data;
 }
-function cacheSet(k, data) { _cache.set(k, { data, ts: Date.now() }); }
+function cacheSet(k, d) { _cache.set(k, { data: d, ts: Date.now() }); }
 
-// ── Etsy API helper ───────────────────────────────────────────
 function etsyGet(path) {
   return new Promise((resolve, reject) => {
-    const url = `${ETSY_BASE}${path}`;
-    const opts = {
-      headers: {
-        'x-api-key': ETSY_API_KEY,
-        'Accept':    'application/json',
-      }
-    };
-    https.get(url, opts, res => {
+    https.get(ETSY_BASE + path, {
+      headers: { 'x-api-key': ETSY_API_KEY, 'Accept': 'application/json' }
+    }, res => {
       let raw = '';
       res.on('data', d => raw += d);
       res.on('end', () => {
         if (res.statusCode === 429) return reject(new Error('etsy_rate_limit'));
-        if (res.statusCode >= 400) return reject(new Error(`etsy_${res.statusCode}`));
-        try { resolve(JSON.parse(raw)); }
-        catch (e) { reject(new Error('etsy_parse_error')); }
+        if (res.statusCode >= 400) return reject(new Error('etsy_' + res.statusCode));
+        try { resolve(JSON.parse(raw)); } catch (e) { reject(new Error('etsy_parse')); }
       });
     }).on('error', reject);
   });
 }
 
-// ── Collecte Etsy ─────────────────────────────────────────────
-async function fetchEtsyListings(keyword, digitalOnly = true) {
-  const cacheKey = `etsy:${keyword}:${digitalOnly}`;
-  const cached = cacheGet(cacheKey);
-  if (cached) return { ...cached, fromCache: true };
-
-  const encoded = encodeURIComponent(keyword);
-  const typeParam = digitalOnly ? '&taxonomy_id=2078' : '';  // 2078 = Digital Downloads
-  const path = `/listings/active?keywords=${encoded}&limit=${MAX_LISTINGS}&includes=Shop,MainImage${typeParam}&sort_on=score&sort_order=desc`;
-
+async function fetchEtsyListings(keyword, digitalOnly) {
+  const key = 'etsy:' + keyword + ':' + digitalOnly;
+  const hit = cacheGet(key);
+  if (hit) return { ...hit, fromCache: true };
   try {
-    const data = await etsyGet(path);
-    const listings = (data.results || []).map(l => ({
-      id:           l.listing_id,
-      title:        l.title || '',
-      price:        parseFloat(l.price?.amount || 0) / (l.price?.divisor || 100),
-      currency:     l.price?.currency_code || 'USD',
-      views:        l.views || 0,
-      favorites:    l.num_favorers || 0,
-      quantity:     l.quantity || 0,
-      tags:         l.tags || [],
-      isDigital:    l.is_digital || false,
-      shopName:     l.Shop?.shop_name || '',
-      shopSales:    l.Shop?.transaction_sold_count || 0,
-      created:      l.creation_timestamp || 0,
-      updated:      l.last_modified_timestamp || 0,
-    }));
-    const result = { listings, total: data.count || 0, fetchedAt: Date.now() };
-    cacheSet(cacheKey, result);
+    const enc  = encodeURIComponent(keyword);
+    const taxo = digitalOnly ? '&taxonomy_id=2078' : '';
+    const data = await etsyGet(
+      '/listings/active?keywords=' + enc + '&limit=' + MAX_LISTINGS + '&includes=Shop' + taxo + '&sort_on=score&sort_order=desc'
+    );
+    const listings = (data.results || []).map(function(l) {
+      return {
+        title:     l.title || '',
+        price:     parseFloat(l.price && l.price.amount ? l.price.amount : 0) / (l.price && l.price.divisor ? l.price.divisor : 100),
+        favorites: l.num_favorers || 0,
+        shopSales: l.Shop && l.Shop.transaction_sold_count ? l.Shop.transaction_sold_count : 0,
+        isDigital: l.is_digital || false,
+        shopName:  l.Shop && l.Shop.shop_name ? l.Shop.shop_name : '',
+        tags:      l.tags || [],
+        updated:   l.last_modified_timestamp || 0,
+      };
+    });
+    const result = { listings: listings, total: data.count || 0, fetchedAt: Date.now() };
+    cacheSet(key, result);
     return result;
   } catch (e) {
-    // Si API indispo ou pending approval → retourner données vides avec flag
-    console.warn('[ENI] Etsy API error:', e.message);
+    console.warn('[ENI] Etsy API:', e.message);
     return { listings: [], total: 0, fetchedAt: Date.now(), apiError: e.message };
   }
 }
 
-// ── Scoring déterministe ──────────────────────────────────────
-function computeScores(listings, manualData = {}) {
+function computeScores(listings, manualData) {
   const n = listings.length;
-  if (n === 0) {
-    // Mode manuel uniquement
-    return computeManualScores(manualData);
-  }
+  if (n === 0) return computeManualScores(manualData || {});
 
-  // --- Demande proxy (0.28) ---
-  // Proxy : nb total de résultats Etsy + densité de favoris top 10
-  const top10    = listings.slice(0, 10);
-  const avgFavs  = top10.reduce((s, l) => s + l.favorites, 0) / Math.max(top10.length, 1);
-  const demandSignal = Math.min(avgFavs / 500, 1);         // 500 favs = signal fort
-  const volumeSignal = Math.min(n / MAX_LISTINGS, 1);       // plein de résultats = demande
-  const demandScore  = demandSignal * 0.6 + volumeSignal * 0.4;
-
-  // --- Accessibilité (0.24) ---
-  // % listings avec < 50 favoris (= boutiques sans domination forte)
-  const lowBarrier  = listings.filter(l => l.favorites < 50).length / n;
-  // % boutiques avec peu de ventes (shopSales disponible via includes=Shop)
-  const smallShops  = listings.filter(l => l.shopSales < 500).length / n;
+  const top10      = listings.slice(0, 10);
+  const avgFavs    = top10.reduce(function(s, l) { return s + l.favorites; }, 0) / Math.max(top10.length, 1);
+  const demandScore = Math.min(avgFavs / 500, 1) * 0.6 + Math.min(n / MAX_LISTINGS, 1) * 0.4;
+  const lowBarrier  = listings.filter(function(l) { return l.favorites < 50; }).length / n;
+  const smallShops  = listings.filter(function(l) { return l.shopSales < 500; }).length / n;
   const accessScore = lowBarrier * 0.6 + smallShops * 0.4;
+  const words       = [];
+  listings.forEach(function(l) {
+    l.title.toLowerCase().split(/\W+/).filter(function(w) { return w.length > 4; }).forEach(function(w) { words.push(w); });
+  });
+  const wc = {};
+  words.forEach(function(w) { wc[w] = (wc[w] || 0) + 1; });
+  const top5rep     = Object.values(wc).sort(function(a, b) { return b - a; }).slice(0, 5);
+  const rep         = top5rep.reduce(function(s, c) { return s + c; }, 0) / Math.max(words.length, 1);
+  const weakScore   = Math.min(rep * 3, 1);
+  const prices      = listings.map(function(l) { return l.price; }).filter(function(p) { return p > 0; }).sort(function(a, b) { return a - b; });
+  const medianPrice = prices[Math.floor(prices.length / 2)] || 0;
+  const isDigital   = listings.filter(function(l) { return l.isDigital; }).length / n > 0.5;
+  const marginScore = isDigital ? Math.min(medianPrice / 20, 1) : Math.min(medianPrice / 40, 1);
+  const shopNames   = new Set(listings.map(function(l) { return l.shopName; }));
+  const allTags     = new Set([]);
+  listings.forEach(function(l) { l.tags.forEach(function(t) { allTags.add(t); }); });
+  const divRaw      = Math.min(shopNames.size / n, 1) * 0.5 + Math.min(allTags.size / 100, 1) * 0.5;
+  const divFinal    = divRaw > 0.9 ? divRaw * 0.85 : divRaw;
+  const now         = Date.now() / 1000;
+  const freshScore  = listings.filter(function(l) { return (now - l.updated) < 180 * 86400; }).length / n;
 
-  // --- Faiblesse concurrentielle (0.18) - INVERSÉ ---
-  // Homogénéité des titres (mots répétitifs → opportunité de différenciation)
-  const titleWords = listings.flatMap(l => l.title.toLowerCase().split(/\W+/).filter(w => w.length > 4));
-  const wordCount  = {};
-  titleWords.forEach(w => { wordCount[w] = (wordCount[w] || 0) + 1; });
-  const topWords   = Object.values(wordCount).sort((a,b) => b-a).slice(0, 5);
-  const repetition = topWords.reduce((s, c) => s + c, 0) / Math.max(titleWords.length, 1);
-  const weakScore  = Math.min(repetition * 3, 1);  // forte répétition = faiblesse = opportunité
-
-  // --- Marge potentielle (0.15) ---
-  const prices     = listings.map(l => l.price).filter(p => p > 0);
-  const medianPrice = prices.sort((a,b)=>a-b)[Math.floor(prices.length/2)] || 0;
-  const isDigital   = listings.filter(l => l.isDigital).length / n > 0.5;
-  const minPrice    = manualData.minPrice || 5;
-  const marginScore = isDigital
-    ? Math.min(medianPrice / 20, 1)          // digital : marge haute si prix > 20$
-    : Math.min(Math.max(medianPrice - minPrice, 0) / 30, 1);
-
-  // --- Diversité (0.10) ---
-  const uniqueShops  = new Set(listings.map(l => l.shopName)).size;
-  const shopDiversity = Math.min(uniqueShops / n, 1);
-  const tagSets      = listings.map(l => new Set(l.tags));
-  const allTags      = new Set(listings.flatMap(l => l.tags));
-  const tagDiversity = Math.min(allTags.size / 100, 1);
-  const diversityScore = shopDiversity * 0.5 + tagDiversity * 0.5;
-  // Trop de diversité = niche floue (pénalité légère au-delà de 0.9)
-  const diversityFinal = diversityScore > 0.9 ? diversityScore * 0.85 : diversityScore;
-
-  // --- Fraîcheur (0.05) ---
-  const now = Date.now() / 1000;
-  const recency = listings.filter(l => (now - l.updated) < 180 * 86400).length / n;
-  const freshnessScore = recency;
-
-  // --- Score final ---
   const raw =
-    demandScore   * 0.28 +
-    accessScore   * 0.24 +
-    weakScore     * 0.18 +
-    marginScore   * 0.15 +
-    diversityFinal* 0.10 +
-    freshnessScore* 0.05;
+    demandScore * 0.28 + accessScore * 0.24 + weakScore * 0.18 +
+    marginScore * 0.15 + divFinal * 0.10 + freshScore * 0.05;
 
-  // --- Confiance ---
-  const signalsPresent = [
+  const sigs = [
     n >= MIN_LISTINGS,
-    listings.some(l => l.shopSales > 0),
+    listings.some(function(l) { return l.shopSales > 0; }),
     prices.length > 0,
-    listings.some(l => l.tags.length > 0),
-    listings.some(l => l.favorites > 0),
+    listings.some(function(l) { return l.tags.length > 0; }),
+    listings.some(function(l) { return l.favorites > 0; }),
   ].filter(Boolean).length;
-  const confidenceRatio = signalsPresent / 5;
-  const confidence = confidenceRatio >= 0.8 ? 'high' : confidenceRatio >= 0.55 ? 'medium' : 'low';
+
+  const confRatio  = sigs / 5;
+  const confidence = confRatio >= 0.8 ? 'high' : confRatio >= 0.55 ? 'medium' : 'low';
 
   return {
-    opportunity: Math.round(raw * 100 * confidenceRatio),
+    opportunity: Math.round(raw * 100 * confRatio),
     subscores: {
       demand:        Math.round(demandScore * 100),
       accessibility: Math.round(accessScore * 100),
       weakness:      Math.round(weakScore * 100),
       margin:        Math.round(marginScore * 100),
-      diversity:     Math.round(diversityFinal * 100),
-      freshness:     Math.round(freshnessScore * 100),
+      diversity:     Math.round(divFinal * 100),
+      freshness:     Math.round(freshScore * 100),
     },
-    confidence,
-    signalsPresent,
+    confidence: confidence,
     meta: {
       listingsAnalyzed: n,
       avgFavorites:     Math.round(avgFavs),
@@ -181,273 +133,248 @@ function computeScores(listings, manualData = {}) {
       smallShopPct:     Math.round(smallShops * 100),
       lowBarrierPct:    Math.round(lowBarrier * 100),
       isDigitalNiche:   isDigital,
-      uniqueShops,
-      priceRange:       prices.length ? `${Math.min(...prices).toFixed(2)}–${Math.max(...prices).toFixed(2)}` : 'N/A',
+      uniqueShops:      shopNames.size,
+      priceRange:       prices.length ? (Math.min.apply(null, prices).toFixed(2) + '-' + Math.max.apply(null, prices).toFixed(2)) : 'N/A',
     },
   };
 }
 
-function computeManualScores(d = {}) {
-  // Mode dégradé : uniquement données saisies par l'utilisateur
-  const demandScore  = Math.min((d.estimatedResults || 0) / 500, 1);
-  const accessScore  = d.hasSmallSellers ? 0.7 : 0.3;
-  const weakScore    = d.competitionLevel === 'low' ? 0.8 : d.competitionLevel === 'medium' ? 0.5 : 0.2;
-  const marginScore  = Math.min((d.avgPrice || 0) / 25, 1);
-  const raw = demandScore*0.28 + accessScore*0.24 + weakScore*0.18 + marginScore*0.15 + 0.5*0.10 + 0.5*0.05;
+function computeManualScores(d) {
+  const compMap = { low: 0.8, medium: 0.5, high: 0.2 };
+  const raw =
+    Math.min((d.estimatedResults || 0) / 500, 1) * 0.28 +
+    (d.hasSmallSellers ? 0.7 : 0.3) * 0.24 +
+    (compMap[d.competitionLevel || 'medium'] || 0.5) * 0.18 +
+    Math.min((d.avgPrice || 0) / 25, 1) * 0.15 +
+    0.5 * 0.15;
   return {
-    opportunity: Math.round(raw * 100 * 0.55), // confiance forcée à medium
-    subscores: {
-      demand: Math.round(demandScore*100), accessibility: Math.round(accessScore*100),
-      weakness: Math.round(weakScore*100), margin: Math.round(marginScore*100),
-      diversity: 50, freshness: 50,
-    },
+    opportunity: Math.round(raw * 100 * 0.55),
+    subscores: { demand: 0, accessibility: 0, weakness: 0, margin: 0, diversity: 50, freshness: 50 },
     confidence: 'medium',
-    signalsPresent: 3,
-    meta: { listingsAnalyzed: 0, isDigitalNiche: true, priceRange: `${d.avgPrice||0}`, manualMode: true },
+    meta: { listingsAnalyzed: 0, isDigitalNiche: true, priceRange: 'N/A', manualMode: true },
   };
 }
 
-// ── Verdict ───────────────────────────────────────────────────
 function computeVerdict(score, confidence) {
-  if (confidence === 'low')     return 'test';
-  if (score >= 65)              return 'go';
-  if (score >= 40)              return 'test';
+  if (confidence === 'low') return 'test';
+  if (score >= 65)          return 'go';
+  if (score >= 40)          return 'test';
   return 'nogo';
 }
 
-// ── Prompt IA ─────────────────────────────────────────────────
-function buildENIPrompt(keyword, scores, listings, lang, digitalOnly) {
-  const top5titles = listings.slice(0, 5).map(l => l.title.substring(0, 80)).join('\n');
-  const top5tags   = [...new Set(listings.flatMap(l => l.tags))].slice(0, 20).join(', ');
-  const { meta, subscores, confidence, opportunity } = scores;
+function buildPrompt(keyword, scores, listings, lang, digitalOnly) {
+  const top5 = listings.slice(0, 5).map(function(l) { return l.title.substring(0, 80); }).join('\n');
+  const tagSet = [];
+  listings.forEach(function(l) { l.tags.forEach(function(t) { if (tagSet.indexOf(t) < 0) tagSet.push(t); }); });
+  const tags = tagSet.slice(0, 20).join(', ');
+  const m = scores.meta;
+  const s = scores.subscores;
 
-  return `You are an Etsy market analyst helping a seller find profitable niches. Analyze this niche and respond ONLY in "${lang}" language.
-
-NICHE KEYWORD: "${keyword}"
-PRODUCT TYPE: ${digitalOnly ? 'Digital products only' : 'All products'}
-OPPORTUNITY SCORE: ${opportunity}/100
-CONFIDENCE: ${confidence}
-
-MARKET DATA:
-- Listings analyzed: ${meta.listingsAnalyzed}
-- Average favorites (top 10): ${meta.avgFavorites}
-- Median price: $${meta.medianPrice}
-- Price range: $${meta.priceRange}
-- Small sellers present (${meta.lowBarrierPct}% listings < 50 favs): ${meta.lowBarrierPct > 40 ? 'YES' : 'NO'}
-- Unique shops: ${meta.uniqueShops}
-
-SUB-SCORES (0-100):
-- Demand proxy: ${subscores.demand}
-- Accessibility for new sellers: ${subscores.accessibility}
-- Competitive weakness (higher = more opportunity): ${subscores.weakness}
-- Margin potential: ${subscores.margin}
-- Diversity: ${subscores.diversity}
-
-SAMPLE TITLES FROM TOP LISTINGS:
-${top5titles || 'No data available'}
-
-POPULAR TAGS IN NICHE:
-${top5tags || 'No data available'}
-
-Return ONLY valid JSON (no markdown, no explanation):
-{
-  "verdict_reasons": [
-    "<reason 1 in ${lang}, 1 sentence>",
-    "<reason 2 in ${lang}, 1 sentence>",
-    "<reason 3 in ${lang}, 1 sentence>"
-  ],
-  "summary": "<2-3 sentence market overview in ${lang}>",
-  "sub_niches": [
-    {
-      "keyword": "<specific sub-niche keyword>",
-      "angle": "<differentiation angle: audience/occasion/style/format/benefit>",
-      "description": "<why this sub-niche is interesting, 1 sentence in ${lang}>",
-      "estimated_score": <0-100>,
-      "digital_friendly": <true|false>
-    }
-  ],
-  "small_seller_wins": [
-    "<observation about accessible listings or shops, in ${lang}>",
-    "<observation 2>",
-    "<observation 3>"
-  ],
-  "creation_brief": {
-    "concept": "<original product concept, NOT copying competitors, in ${lang}>",
-    "target_audience": "<specific buyer persona in ${lang}>",
-    "occasion": "<use case or occasion in ${lang}>",
-    "style": "<visual/aesthetic style in ${lang}>",
-    "format": "<file format or product format for digital in ${lang}>",
-    "usp": "<unique selling proposition vs competitors, in ${lang}>",
-    "assets_to_create": ["<asset 1 in ${lang}>", "<asset 2>", "<asset 3>", "<asset 4>", "<asset 5>"],
-    "tags_candidates": [
-      "<tag 1>", "<tag 2>", "<tag 3>", "<tag 4>", "<tag 5>",
-      "<tag 6>", "<tag 7>", "<tag 8>", "<tag 9>", "<tag 10>",
-      "<tag 11>", "<tag 12>", "<tag 13>"
-    ],
-    "pre_publish_checklist": [
-      "<checklist item 1 in ${lang}>",
-      "<checklist item 2>",
-      "<checklist item 3>",
-      "<checklist item 4>",
-      "<checklist item 5>"
-    ],
-    "trademark_warning": "<trademark/brand check reminder in ${lang}>"
-  },
-  "seasonality_note": "<brief note on seasonality if relevant, or null>"
+  return 'You are an Etsy market analyst. Analyze this niche and respond ONLY in "' + lang + '" language.\n\n' +
+    'NICHE: "' + keyword + '" | Type: ' + (digitalOnly ? 'Digital only' : 'All') + '\n' +
+    'OPPORTUNITY SCORE: ' + scores.opportunity + '/100 | CONFIDENCE: ' + scores.confidence + '\n\n' +
+    'MARKET DATA:\n' +
+    '- Listings analyzed: ' + m.listingsAnalyzed + '\n' +
+    '- Avg favorites top 10: ' + m.avgFavorites + '\n' +
+    '- Median price: $' + m.medianPrice + ' | Range: $' + m.priceRange + '\n' +
+    '- Small sellers (' + m.lowBarrierPct + '% with < 50 favs): ' + (m.lowBarrierPct > 40 ? 'YES' : 'NO') + '\n\n' +
+    'SUB-SCORES (0-100): demand=' + s.demand + ' accessibility=' + s.accessibility + ' weakness=' + s.weakness + ' margin=' + s.margin + '\n\n' +
+    'SAMPLE TITLES:\n' + (top5 || 'No data') + '\n\n' +
+    'POPULAR TAGS: ' + (tags || 'No data') + '\n\n' +
+    'Return ONLY valid JSON (no markdown):\n' +
+    '{\n' +
+    '  "verdict_reasons": ["<reason 1 in ' + lang + '>","<reason 2>","<reason 3>"],\n' +
+    '  "summary": "<2-3 sentences in ' + lang + '>",\n' +
+    '  "sub_niches": [\n' +
+    '    {"keyword":"<sub-niche>","angle":"<audience|occasion|style|format|benefit>","description":"<1 sentence in ' + lang + '>","estimated_score":<0-100>,"digital_friendly":<true|false>}\n' +
+    '  ],\n' +
+    '  "small_seller_wins": ["<obs in ' + lang + '>","<obs 2>","<obs 3>"],\n' +
+    '  "creation_brief": {\n' +
+    '    "concept":"<ORIGINAL concept, not copying competitors, in ' + lang + '>",\n' +
+    '    "target_audience":"<persona in ' + lang + '>",\n' +
+    '    "occasion":"<use case in ' + lang + '>",\n' +
+    '    "style":"<visual style in ' + lang + '>",\n' +
+    '    "format":"<file format in ' + lang + '>",\n' +
+    '    "usp":"<USP in ' + lang + '>",\n' +
+    '    "assets_to_create":["<asset 1 in ' + lang + '>","<a2>","<a3>","<a4>","<a5>"],\n' +
+    '    "tags_candidates":["<t1>","<t2>","<t3>","<t4>","<t5>","<t6>","<t7>","<t8>","<t9>","<t10>","<t11>","<t12>","<t13>"],\n' +
+    '    "pre_publish_checklist":["<item 1 in ' + lang + '>","<i2>","<i3>","<i4>","<i5>"],\n' +
+    '    "trademark_warning":"<trademark reminder in ' + lang + '>"\n' +
+    '  },\n' +
+    '  "seasonality_note":"<seasonality note in ' + lang + ' or null>"\n' +
+    '}\n' +
+    'Rules: exactly 10 sub_niches, exactly 13 tags_candidates (max 20 chars each), original concept only.';
 }
 
-Rules:
-- sub_niches: exactly 10, varied angles (audience, occasion, style, format, benefit)
-- tags_candidates: exactly 13, no duplicates, max 20 chars each, no trademark terms
-- creation_brief concept must be ORIGINAL, not a copy of observed listings
-- All text in "${lang}" language
-- estimated_score based on sub-niche specificity vs parent niche competition`;
-}
+router.get('/ping', function(req, res) {
+  res.json({ ok: true, etsyApiConfigured: !!ETSY_API_KEY, cacheSize: _cache.size });
+});
 
-// ── Endpoint principal : POST /eni/analyse ────────────────────
-router.post('/analyse', async (req, res) => {
+router.post('/analyse', async function(req, res) {
   try {
-    const {
-      deviceId, licenseKey,
-      keyword,
-      lang        = 'en',
-      digitalOnly = true,
-      manualData  = {},
-    } = req.body;
+    const body        = req.body || {};
+    const license     = body.licenseKey || body.license || '';
+    const deviceId    = body.deviceId || '';
+    const keyword     = (body.keyword || '').trim();
+    const lang        = body.lang || 'en';
+    const digitalOnly = body.digitalOnly !== false;
+    const manualData  = body.manualData || {};
 
-    if (!keyword || keyword.trim().length < 2) {
-      return res.status(400).json({ error: 'invalid_keyword', message: 'Keyword is required (min 2 chars)' });
+    if (keyword.length < 2) {
+      return res.status(400).json({ ok: false, error: 'invalid_keyword' });
     }
 
-    // --- Licence ---
-    const { checkLicense, deductUnit } = require('./store');
-    const license = await checkLicense(deviceId, licenseKey, 'eni');
-    if (!license.valid) {
-      return res.status(403).json({ error: 'license_invalid', message: license.reason });
-    }
-    if (license.remaining < 1) {
-      return res.status(402).json({ error: 'quota_exceeded', remaining: 0 });
+    const checkLicense = require('./license').checkLicense;
+    const store        = require('./store');
+    const callAI       = require('./aiprovider').callAI;
+    const planLimits   = require('./license').planLimits;
+
+    const info = await checkLicense(license);
+    if (info.kind === 'error')
+      return res.status(503).json({ ok: false, error: 'verification_indisponible',
+        message: 'License verification unavailable. Try again.' });
+    if (info.kind === 'invalid')
+      return res.status(402).json({ ok: false, error: 'abonnement_inactif',
+        message: 'Invalid or expired key. Subscribe or buy credits.' });
+    if (info.kind === 'credits' && store.grantCreditsOnce)
+      await store.grantCreditsOnce(license, info.creditGrant);
+    if (info.kind === 'none' && !deviceId)
+      return res.status(400).json({ ok: false, error: 'deviceId_required' });
+
+    const limits = planLimits ? planLimits() : { trial: 5 };
+    let available  = 0;
+    let bucketPlan = 'trial';
+
+    if (info.kind === 'dev') {
+      available = 9999; bucketPlan = 'dev';
+    } else if (info.kind === 'subscription') {
+      const used = await store.getMonthly('lic:' + license);
+      const cred = await store.getCredits(license);
+      available  = Math.max(0, info.limit - used) + cred;
+      bucketPlan = 'abo';
+    } else if (info.kind === 'credits') {
+      available  = await store.getCredits(license);
+      bucketPlan = 'credits';
+    } else {
+      const used = await store.getTrial(deviceId);
+      available  = Math.max(0, limits.trial - used);
     }
 
-    // --- Collecte Etsy API ---
-    const { listings, total, fetchedAt, apiError, fromCache } = await fetchEtsyListings(keyword.trim(), digitalOnly);
+    if (available <= 0) {
+      return res.status(402).json({ ok: false, error: 'quota_atteint',
+        message: bucketPlan === 'trial'
+          ? 'Free trial exhausted. Subscribe or buy credits.'
+          : 'Quota reached. Resets next month, or buy credits.' });
+    }
 
-    // --- Scoring ---
+    const { listings, total, fetchedAt, apiError } = await fetchEtsyListings(keyword, digitalOnly);
     const scores  = computeScores(listings, manualData);
     const verdict = computeVerdict(scores.opportunity, scores.confidence);
+    const prompt  = buildPrompt(keyword, scores, listings, lang, digitalOnly);
 
-    // --- IA ---
-    const prompt = buildENIPrompt(keyword, scores, listings, lang, digitalOnly);
-    let aiResult;
+    let aiResult = {};
     try {
       const raw = await callAI(prompt, { maxTokens: 4096, temperature: 0.4, jsonMode: true });
       aiResult  = typeof raw === 'string' ? JSON.parse(raw) : raw;
     } catch (e) {
       console.error('[ENI] AI error:', e.message);
-      return res.status(500).json({ error: 'ai_error', message: 'AI analysis failed' });
+      return res.status(500).json({ ok: false, error: 'ai_error', message: 'AI analysis failed' });
     }
 
-    // --- Déduire 1 unité ---
-    await deductUnit(deviceId, licenseKey, 'eni', 1);
+    // Debit
+    if (info.kind === 'dev') {
+      if (store.incrementMonthly) await store.incrementMonthly('dev');
+    } else if (info.kind === 'subscription') {
+      const id   = 'lic:' + license;
+      const used = await store.getMonthly(id);
+      if (used < info.limit) await store.incrementMonthly(id);
+      else if (store.consumeCredit) await store.consumeCredit(license);
+    } else if (info.kind === 'credits') {
+      if (store.consumeCredit) await store.consumeCredit(license);
+    } else {
+      await store.incrementTrial(deviceId);
+    }
+
+    // Restant
+    let restant = null;
+    if (info.kind === 'subscription') {
+      const id   = 'lic:' + license;
+      const used = await store.getMonthly(id);
+      restant    = Math.max(0, info.limit - used) + (await store.getCredits(license));
+    } else if (info.kind === 'credits') {
+      restant = await store.getCredits(license);
+    } else if (info.kind === 'none') {
+      const used = await store.getTrial(deviceId);
+      restant    = Math.max(0, (limits.trial || 5) - used);
+    }
 
     return res.json({
-      success: true,
-      keyword: keyword.trim(),
-      lang,
-      digitalOnly,
-      verdict,
-      scores,
+      ok: true,
+      keyword: keyword,
+      lang: lang,
+      digitalOnly: digitalOnly,
+      verdict: verdict,
+      scores: scores,
       market: {
-        totalListings: total,
+        totalListings:    total,
         listingsAnalyzed: listings.length,
-        fetchedAt,
-        fromCache: !!fromCache,
-        apiError: apiError || null,
-        sampleListings: listings.slice(0, 5).map(l => ({
-          title: l.title,
-          price: l.price,
-          favorites: l.favorites,
-          shopSales: l.shopSales,
-          isDigital: l.isDigital,
-        })),
+        fetchedAt:        fetchedAt,
+        apiError:         apiError || null,
+        sampleListings:   listings.slice(0, 5).map(function(l) {
+          return { title: l.title, price: l.price, favorites: l.favorites, isDigital: l.isDigital };
+        }),
       },
       reports: {
-        verdictReasons:  aiResult.verdict_reasons  || [],
-        summary:         aiResult.summary          || '',
-        subNiches:       aiResult.sub_niches       || [],
-        smallSellerWins: aiResult.small_seller_wins|| [],
-        creationBrief:   aiResult.creation_brief   || {},
-        seasonalityNote: aiResult.seasonality_note || null,
+        verdictReasons:  aiResult.verdict_reasons   || [],
+        summary:         aiResult.summary           || '',
+        subNiches:       aiResult.sub_niches        || [],
+        smallSellerWins: aiResult.small_seller_wins || [],
+        creationBrief:   aiResult.creation_brief    || {},
+        seasonalityNote: aiResult.seasonality_note  || null,
       },
+      restant: restant,
     });
 
   } catch (err) {
     console.error('[ENI]', err);
-    return res.status(500).json({ error: 'server_error', message: err.message });
+    return res.status(500).json({ ok: false, error: 'server_error', message: err.message });
   }
 });
 
-// ── Endpoint comparaison : POST /eni/compare ─────────────────
-router.post('/compare', async (req, res) => {
+router.post('/compare', async function(req, res) {
   try {
-    const { deviceId, licenseKey, analyses, lang = 'en' } = req.body;
+    const body     = req.body || {};
+    const analyses = body.analyses || [];
+    const lang     = body.lang || 'en';
+    if (analyses.length < 2 || analyses.length > 3)
+      return res.status(400).json({ ok: false, error: 'need 2 or 3 analyses' });
 
-    if (!Array.isArray(analyses) || analyses.length < 2 || analyses.length > 3) {
-      return res.status(400).json({ error: 'invalid_analyses', message: 'Provide 2 or 3 analyses to compare' });
-    }
+    const callAI = require('./aiprovider').callAI;
+    const lines  = analyses.map(function(a, i) {
+      return 'Niche ' + (i+1) + ': "' + a.keyword + '" score=' + (a.scores && a.scores.opportunity || 0) + '/100 verdict=' + a.verdict;
+    }).join('\n');
 
-    const { checkLicense, deductUnit } = require('./store');
-    const license = await checkLicense(deviceId, licenseKey, 'eni');
-    if (!license.valid) return res.status(403).json({ error: 'license_invalid', message: license.reason });
+    const prompt = 'Compare these ' + analyses.length + ' Etsy niches. Respond in "' + lang + '".\n' + lines + '\n' +
+      'Return ONLY JSON: {"winner":<0|1|2>,"winner_reason":"<2 sentences in ' + lang + '>","comparison_matrix":[{"dimension":"<in ' + lang + '>","values":["<n1>","<n2>","<n3 or null>"]}],"combined_opportunity":"<insight in ' + lang + ' or null>"}';
 
-    const prompt = `You are an Etsy market analyst. Compare these ${analyses.length} niches and give a recommendation. Respond in "${lang}".
-
-${analyses.map((a, i) => `NICHE ${i+1}: "${a.keyword}"
-- Opportunity score: ${a.scores?.opportunity}/100
-- Confidence: ${a.scores?.confidence}
-- Demand: ${a.scores?.subscores?.demand}, Accessibility: ${a.scores?.subscores?.accessibility}, Weakness: ${a.scores?.subscores?.weakness}
-- Verdict: ${a.verdict}`).join('\n\n')}
-
-Return ONLY valid JSON:
-{
-  "winner": <0|1|2 (index of best niche)>,
-  "winner_reason": "<why this niche is best, 2 sentences in ${lang}>",
-  "comparison_matrix": [
-    { "dimension": "<dimension name in ${lang}>", "values": ["<niche1 assessment>", "<niche2 assessment>", "<niche3 assessment or null>"] }
-  ],
-  "combined_opportunity": "<is there a way to combine these niches? insight in ${lang} or null>"
-}`;
-
-    let aiResult = {};
+    let ai = {};
     try {
-      const raw = await callAI(prompt, { maxTokens: 1024, temperature: 0.3, jsonMode: true });
-      aiResult  = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      const raw = await callAI(prompt, { maxTokens: 800, temperature: 0.3, jsonMode: true });
+      ai        = typeof raw === 'string' ? JSON.parse(raw) : raw;
     } catch (e) { console.error('[ENI compare]', e.message); }
 
-    await deductUnit(deviceId, licenseKey, 'eni', analyses.length);
-
     return res.json({
-      success: true,
-      analyses: analyses.map(a => ({ keyword: a.keyword, score: a.scores?.opportunity, verdict: a.verdict })),
-      winner:              aiResult.winner,
-      winnerReason:        aiResult.winner_reason        || '',
-      comparisonMatrix:    aiResult.comparison_matrix    || [],
-      combinedOpportunity: aiResult.combined_opportunity || null,
+      ok:                  true,
+      analyses:            analyses.map(function(a) { return { keyword: a.keyword, score: a.scores && a.scores.opportunity, verdict: a.verdict }; }),
+      winner:              ai.winner,
+      winnerReason:        ai.winner_reason        || '',
+      comparisonMatrix:    ai.comparison_matrix     || [],
+      combinedOpportunity: ai.combined_opportunity  || null,
     });
-
   } catch (err) {
     console.error('[ENI compare]', err);
-    return res.status(500).json({ error: 'server_error', message: err.message });
+    return res.status(500).json({ ok: false, error: err.message });
   }
-});
-
-// ── Endpoint utilitaire : GET /eni/ping ───────────────────────
-router.get('/ping', (req, res) => {
-  res.json({
-    ok: true,
-    etsyApiConfigured: !!ETSY_API_KEY,
-    cacheSize: _cache.size,
-  });
 });
 
 module.exports = router;
