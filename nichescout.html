@@ -538,42 +538,7 @@ function stopLoad(){
   [0,1,2].forEach(i=>document.getElementById('ls'+i).className='load-step done');
 }
 
-// Run analysis
-async function runAnalysis(){
-  const keyword=document.getElementById('kw').value.trim();
-  if(keyword.length<2)return;
-  const manOn=document.getElementById('man-tog').checked;
-  const body={
-    deviceId,
-    licenseKey:document.getElementById('lic-key').value.trim()||null,
-    license:document.getElementById('lic-key').value.trim()||null,
-    keyword,
-    lang:document.getElementById('al').value,
-    digitalOnly:document.getElementById('dig-only').checked,
-    manualData:manOn?{
-      estimatedResults:parseInt(document.getElementById('m-res').value)||0,
-      avgPrice:parseFloat(document.getElementById('m-price').value)||0,
-      competitionLevel:document.getElementById('m-comp').value,
-      hasSmallSellers:document.getElementById('m-small').checked,
-    }:{},
-  };
-  startLoad();
-  try{
-    const r=await fetch(SERVER+'/eni/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    stopLoad();
-    const data=await r.json();
-    if(!r.ok||data.error){
-      if(data.error==='quota_atteint'){showErr(data.message||data.error);setTimeout(openUpgrade,600);return;}
-      showErr(data.message||data.error);return;
-    }
-    lastResult=data;
-    if(data.restant!==null&&data.restant!==undefined)updateQuota(data.restant);
-    renderResults(data);
-    pushToCompare(data);
-    addToHistory(data);
-  }catch(e){stopLoad();showErr('Connection error: '+e.message);}
-}
-function showErr(msg){// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
 // Historique local (localStorage)
 // ════════════════════════════════════════════════════════════
 const HIST_KEY = 'nichescout_history';
@@ -662,7 +627,7 @@ function toggleHist(){
   renderHistory();
 }
 
-showState('empty');document.getElementById('s-empty').innerHTML=`<div class="ico">⚠️</div><h3>Error</h3><p style="color:var(--red);max-width:360px">${msg}</p>`;}
+function showErr(msg){showState('empty');document.getElementById('s-empty').innerHTML=`<div class="ico">⚠️</div><h3>Error</h3><p style="color:var(--red);max-width:360px">${msg}</p>`;}
 
 // Score color
 function sc(v){return v>=65?'c-g':v>=40?'c-o':'c-r';}
@@ -1001,6 +966,43 @@ document.getElementById('kw').addEventListener('keydown',e=>{
   onKw();
   if(e.key==='Enter'){const btn=document.getElementById('btn-go');if(!btn.disabled)runAnalysis();}
 });
+
+// Run analysis
+async function runAnalysis(){
+  const keyword=document.getElementById('kw').value.trim();
+  if(keyword.length<2)return;
+  const manOn=document.getElementById('man-tog').checked;
+  const body={
+    deviceId,
+    licenseKey:document.getElementById('lic-key').value.trim()||null,
+    license:document.getElementById('lic-key').value.trim()||null,
+    keyword,
+    lang:document.getElementById('al').value,
+    digitalOnly:document.getElementById('dig-only').checked,
+    manualData:manOn?{
+      estimatedResults:parseInt(document.getElementById('m-res').value)||0,
+      avgPrice:parseFloat(document.getElementById('m-price').value)||0,
+      competitionLevel:document.getElementById('m-comp').value,
+      hasSmallSellers:document.getElementById('m-small').checked,
+    }:{},
+  };
+  startLoad();
+  try{
+    const r=await fetch(SERVER+'/eni/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    stopLoad();
+    const data=await r.json();
+    if(!r.ok||data.error){
+      if(data.error==='quota_atteint'){showErr(data.message||data.error);setTimeout(openUpgrade,600);return;}
+      showErr(data.message||data.error);return;
+    }
+    lastResult=data;
+    if(data.restant!==null&&data.restant!==undefined)updateQuota(data.restant);
+    renderResults(data);
+    pushToCompare(data);
+    addToHistory(data);
+  }catch(e){stopLoad();showErr('Connection error: '+e.message);}
+}
+function showErr(msg){showState('empty');document.getElementById('s-empty').innerHTML=`<div class="ico">⚠️</div><h3>Error</h3><p style="color:var(--red);max-width:360px">${msg}</p>`;}
 
 showState('empty');
 renderHistory();
