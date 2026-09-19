@@ -259,6 +259,26 @@ select.si{cursor:pointer}
 .btn-exp:hover{border-color:var(--etsy);color:var(--etsy)}
 .attr{font-size:10px;color:var(--faint);margin-top:.75rem}
 
+/* HISTORIQUE */
+.hist-btn{display:flex;align-items:center;gap:.5rem;width:100%;padding:.55rem .75rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer;transition:.2s;text-align:left}
+.hist-btn:hover{border-color:var(--etsy);color:var(--text)}
+.hist-panel{display:none;flex-direction:column;gap:.375rem;margin-top:.375rem;max-height:280px;overflow-y:auto}
+.hist-panel.open{display:flex}
+.hist-item{background:var(--surface2);border:.5px solid var(--border);border-radius:8px;padding:.625rem .75rem;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:.625rem}
+.hist-item:hover{border-color:var(--etsy);background:rgba(255,107,53,.06)}
+.hi-verdict{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.hi-go{background:var(--green-bg);color:var(--green)}
+.hi-test{background:var(--orange-bg);color:var(--orange)}
+.hi-nogo{background:var(--red-bg);color:var(--red)}
+.hi-body{flex:1;min-width:0}
+.hi-kw{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.hi-meta{font-size:10.5px;color:var(--muted);margin-top:1px}
+.hi-rm{background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;padding:0 .2rem;flex-shrink:0;transition:.15s}
+.hi-rm:hover{color:var(--red)}
+.hist-empty{font-size:12px;color:var(--faint);text-align:center;padding:.875rem}
+.hist-clear{font-size:11px;color:var(--muted);cursor:pointer;text-align:center;padding:.25rem;transition:.15s}
+.hist-clear:hover{color:var(--red)}
+
 @media(max-width:880px){
   .layout{grid-template-columns:1fr}
   .sidebar{position:static;max-height:none}
@@ -388,6 +408,16 @@ select.si{cursor:pointer}
     <div class="toggle-row" style="margin-top:.125rem">
       <div class="tl" data-i18n="mSmall">Small sellers present</div>
       <label class="sw"><input type="checkbox" id="m-small" checked><span class="sw-track"></span></label>
+    </div>
+  </div>
+
+  <div>
+    <button class="hist-btn" onclick="toggleHist()" id="hist-toggle">
+      <span>🕐</span><span id="hist-toggle-lbl">Historique des analyses</span><span style="margin-left:auto;font-size:10px" id="hist-count"></span>
+    </button>
+    <div class="hist-panel" id="hist-panel">
+      <div id="hist-list"></div>
+      <div class="hist-clear" onclick="clearHistory()" id="hist-clear-btn">🗑 Effacer l'historique</div>
     </div>
   </div>
 
@@ -540,9 +570,99 @@ async function runAnalysis(){
     if(data.restant!==null&&data.restant!==undefined)updateQuota(data.restant);
     renderResults(data);
     pushToCompare(data);
+    addToHistory(data);
   }catch(e){stopLoad();showErr('Connection error: '+e.message);}
 }
-function showErr(msg){showState('empty');document.getElementById('s-empty').innerHTML=`<div class="ico">⚠️</div><h3>Error</h3><p style="color:var(--red);max-width:360px">${msg}</p>`;}
+function showErr(msg){// ════════════════════════════════════════════════════════════
+// Historique local (localStorage)
+// ════════════════════════════════════════════════════════════
+const HIST_KEY = 'nichescout_history';
+const HIST_MAX = 30;
+
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem(HIST_KEY)||'[]'); }
+  catch{ return []; }
+}
+function saveHistory(hist){
+  try{ localStorage.setItem(HIST_KEY, JSON.stringify(hist)); } catch{}
+}
+function addToHistory(data){
+  if(!data||!data.keyword)return;
+  let hist = loadHistory();
+  // Retirer si déjà présent (même keyword)
+  hist = hist.filter(h=>h.keyword!==data.keyword);
+  // Ajouter en tête
+  hist.unshift({
+    keyword:   data.keyword,
+    verdict:   data.verdict,
+    score:     data.scores&&data.scores.opportunity||0,
+    lang:      data.lang||'en',
+    date:      new Date().toLocaleDateString(),
+    ts:        Date.now(),
+    // Sauvegarder le résultat complet pour pouvoir le recharger
+    full:      data,
+  });
+  // Limiter à HIST_MAX
+  if(hist.length>HIST_MAX) hist = hist.slice(0,HIST_MAX);
+  saveHistory(hist);
+  renderHistory();
+}
+function renderHistory(){
+  const hist = loadHistory();
+  const list = document.getElementById('hist-list');
+  const count = document.getElementById('hist-count');
+  const clearBtn = document.getElementById('hist-clear-btn');
+  if(!list)return;
+  count.textContent = hist.length ? hist.length+'': '';
+  if(!hist.length){
+    list.innerHTML='<div class="hist-empty">Aucune analyse sauvegardée</div>';
+    if(clearBtn)clearBtn.style.display='none';
+    return;
+  }
+  if(clearBtn)clearBtn.style.display='';
+  list.innerHTML = hist.map((h,i)=>`
+    <div class="hist-item" onclick="loadFromHistory(${i})">
+      <div class="hi-verdict hi-${h.verdict||'test'}">${{go:'✅',test:'🔶',nogo:'❌'}[h.verdict]||'🔶'}</div>
+      <div class="hi-body">
+        <div class="hi-kw">${h.keyword}</div>
+        <div class="hi-meta">${h.score}/100 · ${h.lang.toUpperCase()} · ${h.date}</div>
+      </div>
+      <button class="hi-rm" onclick="event.stopPropagation();removeFromHistory(${i})" title="Supprimer">✕</button>
+    </div>
+  `).join('');
+}
+function loadFromHistory(i){
+  const hist = loadHistory();
+  const item = hist[i];
+  if(!item||!item.full)return;
+  // Remettre le mot-clé dans le champ
+  document.getElementById('kw').value = item.keyword;
+  onKw();
+  // Afficher le résultat
+  lastResult = item.full;
+  activeTab = 'verdict';
+  renderResults(item.full);
+  // Fermer le panneau historique
+  document.getElementById('hist-panel').classList.remove('open');
+}
+function removeFromHistory(i){
+  let hist = loadHistory();
+  hist.splice(i,1);
+  saveHistory(hist);
+  renderHistory();
+}
+function clearHistory(){
+  if(!confirm("Effacer tout l'historique ?"))return;
+  saveHistory([]);
+  renderHistory();
+}
+function toggleHist(){
+  const panel = document.getElementById('hist-panel');
+  panel.classList.toggle('open');
+  renderHistory();
+}
+
+showState('empty');document.getElementById('s-empty').innerHTML=`<div class="ico">⚠️</div><h3>Error</h3><p style="color:var(--red);max-width:360px">${msg}</p>`;}
 
 // Score color
 function sc(v){return v>=65?'c-g':v>=40?'c-o':'c-r';}
@@ -883,6 +1003,7 @@ document.getElementById('kw').addEventListener('keydown',e=>{
 });
 
 showState('empty');
+renderHistory();
 
 function openUpgrade(){
   const el=document.getElementById('upgrade-overlay');
