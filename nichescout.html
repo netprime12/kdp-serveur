@@ -256,7 +256,7 @@ select.s-input{cursor:pointer}
   <div class="s-section">
     <div class="s-label" data-i18n="kwLabel">🔍 Etsy niche keyword</div>
     <div class="search-wrap">
-      <input class="s-input" id="keyword-input" type="text" data-i18n-ph="kwPh" placeholder="e.g. baby shower invitation digital" maxlength="80" oninput="onKeywordChange()">
+      <input class="s-input" id="keyword-input" type="text" data-i18n-ph="kwPh" placeholder="e.g. baby shower invitation digital" maxlength="80" oninput="onKeywordChange()" onchange="onKeywordChange()" onkeyup="onKeywordChange()">
       <span class="search-icon">↵</span>
     </div>
   </div>
@@ -382,7 +382,7 @@ const I18N = {
     verdictReasons:'Why this score', subNicheTitle:'10 Sub-niche suggestions',
     subNicheHint:'Click to select up to 3 for comparison',
     smallWinsTitle:'Small Seller Wins', smallWinsDesc:'Accessible listings observed in this niche',
-    briefTitle:'Creation Brief — Rebuild, don\'t copy',
+    briefTitle:'Creation Brief — Rebuild, do not copy',
     concept:'Product concept', audience:'Target audience', occasion:'Occasion / use case',
     style:'Visual style', format:'Format / files', usp:'Unique selling point',
     assetsTitle:'Assets to create', tagsTitle:'13 tag candidates', clickCopy:'Click to copy',
@@ -399,7 +399,7 @@ const I18N = {
   fr:{
     licLabel:'Clé de licence', licVerify:'Vérifier',
     kwLabel:'🔍 Mot-clé niche Etsy', kwPh:'ex. invitation baby shower numérique',
-    langLabel:'Langue d\'analyse', optLabel:'Options',
+    langLabel:'Langue d’analyse', optLabel:'Options',
     digitalToggle:'Produits numériques uniquement', digitalSub:'Modèles, planners, ebooks…',
     manualToggle:'Ajouter données manuelles', manualSub:'Enrichir avec vos observations',
     manualLabel:'Vos observations Etsy', mResults:'Nb de résultats',
@@ -418,17 +418,17 @@ const I18N = {
     opportunityScore:'Opportunité', demand:'Proxy demande', accessibility:'Accessibilité',
     weakness:'Faiblesse concurrentielle', margin:'Marge', diversity:'Diversité', freshness:'Fraîcheur',
     verdictReasons:'Pourquoi ce score', subNicheTitle:'10 suggestions de sous-niches',
-    subNicheHint:'Cliquer pour sélectionner jusqu\'à 3 à comparer',
+    subNicheHint:'Cliquer pour sélectionner jusqu’à 3 à comparer',
     smallWinsTitle:'Opportunités accessibles', smallWinsDesc:'Listings accessibles observés dans cette niche',
     briefTitle:'Brief de création — Reconstruire, pas copier',
-    concept:'Concept produit', audience:'Audience cible', occasion:'Occasion / cas d\'usage',
+    concept:'Concept produit', audience:'Audience cible', occasion:'Occasion / cas d’usage',
     style:'Style visuel', format:'Format / fichiers', usp:'Proposition de valeur unique',
     assetsTitle:'Assets à créer', tagsTitle:'13 tags candidats', clickCopy:'Cliquer pour copier',
     checklistTitle:'Checklist avant publication', trademarkNote:'Avertissement marque',
     marketTitle:'Données marché', totalListings:'Résultats totaux', analyzed:'Analysés',
     medianPrice:'Prix médian', smallShops:'Petites boutiques',
     sampleTitle:'Exemples de listings', favorites:'favs', digitalLabel:'numérique',
-    apiErrorMsg:'API Etsy en attente d\'activation — analyse sur données manuelles uniquement.',
+    apiErrorMsg:'API Etsy en attente d’activation — analyse sur données manuelles uniquement.',
     exportBrief:'Exporter le brief', exportJSON:'Exporter JSON', exportTags:'Copier tous les tags',
     saveCompare:'Sauvegarder pour comparer', seasonNote:'Saisonnalité',
     compareTitle:'Comparaison de niches', winner:'Niche recommandée',
@@ -782,7 +782,7 @@ function renderWins(items) {
 function renderBrief(brief, seasonNote) {
   if(!brief||!brief.concept) return `<p style="color:var(--muted)">${t('noData')}</p>`;
   const tags = (brief.tags_candidates||[]).map((tag,i)=>`
-    <span class="tag-pill" id="tag-${i}" onclick="copyTag(${i},'${tag.replace(/'/g,'\\'')}','tag-${i}')">${tag}</span>
+    <span class="tag-pill" id="tag-${i}" onclick="copyTag(${i},'${tag.replace(/'/g,'\’')}','tag-${i}')">${tag}</span>
   `).join('');
   const assets = (brief.assets_to_create||[]).map(a=>`<div class="asset-item">${a}</div>`).join('');
   const cl = (brief.pre_publish_checklist||[]).map((item,i)=>`
@@ -964,7 +964,15 @@ function exportBrief(){
 // Enter key
 // ════════════════════════════════════════════════════════════
 document.getElementById('keyword-input').addEventListener('keydown', e=>{
-  if(e.key==='Enter'&&!document.getElementById('btn-analyse').disabled) runAnalysis();
+  onKeywordChange();
+  if(e.key==='Enter'){
+    const btn = document.getElementById('btn-analyse');
+    if(!btn.disabled) runAnalysis();
+    else if(document.getElementById('keyword-input').value.trim().length >= 2){
+      btn.disabled = false;
+      runAnalysis();
+    }
+  }
 });
 
 showState('empty');
