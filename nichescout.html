@@ -461,13 +461,23 @@ async function verifyLicense(){
   if(!key)return;
   el.textContent='⏳…';
   try{
-    const r=await fetch(SERVER+'/check-license',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({licenseKey:key,deviceId,product:'eni'})});
+    const r=await fetch(SERVER+'/verifier-licence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({license:key,deviceId})});
     const d=await r.json();
-    if(d.valid){
-      el.innerHTML=`<span style="color:var(--green)">✓ Active — ${d.remaining} analyses</span>`;
-      updateQuota(d.remaining);
-    }else{el.innerHTML=`<span style="color:var(--red)">✗ ${d.reason||'Invalid key'}</span>`;}
-  }catch{el.innerHTML=`<span style="color:var(--red)">✗ Connection error</span>`;}
+    if(d.active){
+      const n=d.restant!=null?d.restant:'∞';
+      const plan=d.plan==='abo'?'Abonnement':d.plan==='credits'?'Crédits':'Dev';
+      el.innerHTML=`<span style="color:var(--green)">✓ ${plan} — ${n} analyses restantes</span>`;
+      updateQuota(d.restant);
+    } else if(d.plan==='trial'){
+      const n=d.restant!=null?d.restant:0;
+      el.innerHTML=`<span style="color:var(--orange)">Essai gratuit — ${n} analyses restantes</span>`;
+      updateQuota(d.restant);
+    } else if(d.error==='verification_indisponible'){
+      el.innerHTML=`<span style="color:var(--orange)">⚠ Serveur momentanément indisponible</span>`;
+    } else {
+      el.innerHTML=`<span style="color:var(--red)">✗ Clé invalide ou expirée</span>`;
+    }
+  }catch(e){el.innerHTML=`<span style="color:var(--red)">✗ Erreur de connexion (${e.message})</span>`;}
 }
 function updateQuota(n){
   const el=document.getElementById('quota-badge');
@@ -506,6 +516,7 @@ async function runAnalysis(){
   const body={
     deviceId,
     licenseKey:document.getElementById('lic-key').value.trim()||null,
+    license:document.getElementById('lic-key').value.trim()||null,
     keyword,
     lang:document.getElementById('al').value,
     digitalOnly:document.getElementById('dig-only').checked,
