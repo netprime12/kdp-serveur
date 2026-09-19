@@ -226,7 +226,7 @@ router.post('/analyse', async function(req, res) {
 
     const checkLicense = require('./license').checkLicense;
     const store        = require('./store');
-    const callAI       = require('./aiprovider').callAI;
+    const { generate } = require('./aiprovider');
     const planLimits   = require('./license').planLimits;
 
     const info = await checkLicense(license);
@@ -274,7 +274,7 @@ router.post('/analyse', async function(req, res) {
 
     let aiResult = {};
     try {
-      const raw = await callAI(prompt, { maxTokens: 4096, temperature: 0.4, jsonMode: true });
+      const raw = await generate(prompt);
       aiResult  = typeof raw === 'string' ? JSON.parse(raw) : raw;
     } catch (e) {
       console.error('[ENI] AI error:', e.message);
@@ -349,7 +349,7 @@ router.post('/compare', async function(req, res) {
     if (analyses.length < 2 || analyses.length > 3)
       return res.status(400).json({ ok: false, error: 'need 2 or 3 analyses' });
 
-    const callAI = require('./aiprovider').callAI;
+    const { generate } = require('./aiprovider');
     const lines  = analyses.map(function(a, i) {
       return 'Niche ' + (i+1) + ': "' + a.keyword + '" score=' + (a.scores && a.scores.opportunity || 0) + '/100 verdict=' + a.verdict;
     }).join('\n');
@@ -359,7 +359,7 @@ router.post('/compare', async function(req, res) {
 
     let ai = {};
     try {
-      const raw = await callAI(prompt, { maxTokens: 800, temperature: 0.3, jsonMode: true });
+      const raw = await generate(prompt);
       ai        = typeof raw === 'string' ? JSON.parse(raw) : raw;
     } catch (e) { console.error('[ENI compare]', e.message); }
 
