@@ -247,7 +247,7 @@ select.s-input{cursor:pointer}
     <div class="s-label" data-i18n="licLabel">License key</div>
     <div class="lic-row">
       <input class="s-input" id="lic-input" type="text" placeholder="XXXX-XXXX-XXXX-XXXX">
-      <button class="btn-verify" onclick="checkLicense()" data-i18n="licVerify">Verify</button>
+      <button class="btn-verify" onclick="verifyLicense()" data-i18n="licVerify">Verify</button>
     </div>
     <div class="lic-status" id="lic-status"></div>
   </div>
@@ -604,7 +604,7 @@ function confClass(c) { return {high:'conf-high',medium:'conf-medium',low:'conf-
 // ════════════════════════════════════════════════════════════
 // License
 // ════════════════════════════════════════════════════════════
-async function checkLicense() {
+async function verifyLicense() {
   const key = document.getElementById('lic-input').value.trim();
   const el  = document.getElementById('lic-status');
   if (!key) return;
