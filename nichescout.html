@@ -28,6 +28,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .lang-sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.3rem .6rem;border-radius:6px;font-size:12px;cursor:pointer;outline:none}
 .quota-badge{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;background:rgba(255,107,53,.15);color:var(--etsy);border:1px solid rgba(255,107,53,.3);transition:.3s}
 .quota-badge.depleted{background:var(--red-bg);color:var(--red);border-color:var(--red-b)}
+.btn-upgrade{background:linear-gradient(135deg,var(--etsy),var(--etsy2));color:#fff;border:none;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:.2s;letter-spacing:-.01em}
+.btn-upgrade:hover{filter:brightness(1.1)}
+.plan-row{display:flex;align-items:center;gap:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.875rem 1rem;text-decoration:none;color:var(--text);transition:.2s;position:relative}
+.plan-row:hover{border-color:var(--etsy);background:rgba(255,107,53,.06)}
+.plan-featured{border-color:rgba(255,107,53,.4);background:rgba(255,107,53,.06)}
+.plan-name{font-size:13.5px;font-weight:600;margin-bottom:.125rem}
+.plan-quota{font-size:11px;font-weight:400;color:var(--etsy);background:rgba(255,107,53,.12);padding:1px 7px;border-radius:4px;margin-left:.375rem}
+.plan-desc{font-size:11.5px;color:var(--muted)}
+.plan-price{font-size:20px;font-weight:700;color:var(--text);white-space:nowrap;flex-shrink:0}
+.plan-price span{font-size:11px;color:var(--muted);font-weight:400}
 
 /* LAYOUT */
 .layout{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 49px)}
@@ -272,7 +282,54 @@ select.si{cursor:pointer}
       <option value="de">🇩🇪 Deutsch</option>
       <option value="pt">🇧🇷 Português</option>
     </select>
-    <span class="quota-badge" id="quota-badge">Trial — 5 analyses</span>
+    <span class="quota-badge" id="quota-badge" onclick="openUpgrade()" style="cursor:pointer">Trial — 5 analyses</span>
+    <button class="btn-upgrade" onclick="openUpgrade()">⚡ Upgrade</button>
+  </div>
+</div>
+
+<!-- MODAL UPGRADE -->
+<div id="upgrade-overlay" onclick="if(event.target===this)closeUpgrade()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:540px;width:100%;padding:2rem;position:relative;max-height:90vh;overflow-y:auto">
+    <button onclick="closeUpgrade()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">&#x2715;</button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:36px;margin-bottom:.5rem">&#x1F50E;</div>
+      <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:.375rem">NicheScout by Eclozia</div>
+      <div style="font-size:13px;color:var(--muted)">Acces immediat apres achat · Cle de licence par email</div>
+    </div>
+    <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.625rem">Abonnements mensuels</div>
+    <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.25rem">
+      <a href="https://eclozia.gumroad.com/l/idwfbg" target="_blank" class="plan-row">
+        <div style="flex:1"><div class="plan-name">Creator <span class="plan-quota">30 analyses/mois</span></div><div class="plan-desc">Ideal pour debuter — 1 a 3 niches par mois</div></div>
+        <div class="plan-price">12 CAD<span>/mois</span></div>
+      </a>
+      <a href="https://eclozia.gumroad.com/l/twdfxm" target="_blank" class="plan-row plan-featured">
+        <div style="position:absolute;top:-.625rem;left:1rem;background:var(--etsy);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.06em">Populaire</div>
+        <div style="flex:1"><div class="plan-name">Seller Pro <span class="plan-quota">100 analyses/mois</span></div><div class="plan-desc">Pour vendeurs actifs — comparateur inclus</div></div>
+        <div class="plan-price">19 CAD<span>/mois</span></div>
+      </a>
+      <a href="https://eclozia.gumroad.com/l/nmuob" target="_blank" class="plan-row">
+        <div style="flex:1"><div class="plan-name">Studio <span class="plan-quota">300 analyses/mois</span></div><div class="plan-desc">Pour agences et createurs intensifs</div></div>
+        <div class="plan-price">29 CAD<span>/mois</span></div>
+      </a>
+    </div>
+    <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.625rem">Packs credits (sans expiration)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1.25rem">
+      <a href="https://eclozia.gumroad.com/l/zfkjmr" target="_blank" class="plan-row" style="flex-direction:column;gap:.25rem;align-items:flex-start">
+        <div class="plan-name">Pack Decouverte</div>
+        <div class="plan-quota" style="margin-left:0">10 analyses</div>
+        <div class="plan-price" style="font-size:18px">9,99 CAD</div>
+        <div class="plan-desc">Achat unique · Sans expiration</div>
+      </a>
+      <a href="https://eclozia.gumroad.com/l/yroyn" target="_blank" class="plan-row plan-featured" style="flex-direction:column;gap:.25rem;align-items:flex-start">
+        <div class="plan-name">Pack Growth</div>
+        <div class="plan-quota" style="margin-left:0">40 analyses</div>
+        <div class="plan-price" style="font-size:18px">24,99 CAD</div>
+        <div class="plan-desc">0,62 CAD / analyse · Sans expiration</div>
+      </a>
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-align:center;line-height:1.7;padding:.75rem;background:var(--surface2);border-radius:8px">
+      Apres achat sur Gumroad → vous recevez une <strong style="color:var(--text)">cle de licence par email</strong> → collez-la dans le champ "License key" en haut a gauche de NicheScout.
+    </div>
   </div>
 </div>
 
@@ -464,7 +521,10 @@ async function runAnalysis(){
     const r=await fetch(SERVER+'/eni/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     stopLoad();
     const data=await r.json();
-    if(!r.ok||data.error){showErr(data.message||data.error);return;}
+    if(!r.ok||data.error){
+      if(data.error==='quota_atteint'){showErr(data.message||data.error);setTimeout(openUpgrade,600);return;}
+      showErr(data.message||data.error);return;
+    }
     lastResult=data;
     if(data.restant!==null&&data.restant!==undefined)updateQuota(data.restant);
     renderResults(data);
@@ -812,6 +872,18 @@ document.getElementById('kw').addEventListener('keydown',e=>{
 });
 
 showState('empty');
+
+function openUpgrade(){
+  const el=document.getElementById('upgrade-overlay');
+  el.style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeUpgrade(){
+  const el=document.getElementById('upgrade-overlay');
+  el.style.display='none';
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeUpgrade();});
 </script>
 </body>
 </html>
