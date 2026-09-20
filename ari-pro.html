@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ARI — Amazon Review Intelligence by Éclozia</title>
+<style>
+:root{
+  --bg:#080C15;--surface:#111827;--surface2:#1C2333;--surface3:#242B3D;
+  --border:#2D3550;--border2:#3D4870;
+  --amazon:#FF9900;--amazon2:#FFB347;
+  --green:#2ECC71;--green-bg:rgba(46,204,113,.12);--green-b:rgba(46,204,113,.35);
+  --orange:#F39C12;--orange-bg:rgba(243,156,18,.12);--orange-b:rgba(243,156,18,.35);
+  --red:#E74C3C;--red-bg:rgba(231,76,60,.12);--red-b:rgba(231,76,60,.35);
+  --blue:#4A90E2;--blue-bg:rgba(74,144,226,.12);
+  --gold:#F1C40F;--purple:#9B59B6;
+  --text:#EEF2FF;--muted:#8896B3;--faint:#3A4466;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.5rem;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:.625rem;font-weight:700;font-size:15px}
+.logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--amazon),var(--amazon2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.logo-by{font-size:11px;color:var(--muted);font-weight:400}
+.topbar-right{display:flex;align-items:center;gap:.75rem}
+.lang-sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.3rem .6rem;border-radius:6px;font-size:12px;cursor:pointer;outline:none}
+.quota-badge{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;background:rgba(255,153,0,.15);color:var(--amazon);border:1px solid rgba(255,153,0,.3);cursor:pointer;transition:.3s}
+.quota-badge.depleted{background:var(--red-bg);color:var(--red);border-color:var(--red-b)}
+.btn-upgrade{background:linear-gradient(135deg,var(--amazon),var(--amazon2));color:#000;border:none;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;transition:.2s}
+.btn-upgrade:hover{filter:brightness(1.1)}
+.layout{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 49px)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.25rem;overflow-y:auto;max-height:calc(100vh - 49px);position:sticky;top:49px;display:flex;flex-direction:column;gap:1rem}
+.main{padding:1.5rem;overflow-y:auto}
+.sl{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.5rem}
+.si{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.55rem .75rem;border-radius:8px;font-size:13px;outline:none;transition:border .2s}
+.si:focus{border-color:var(--amazon)}
+.si::placeholder{color:var(--faint)}
+select.si{cursor:pointer}
+.lic-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.875rem}
+.lic-row{display:flex;gap:.5rem;margin-top:.4rem}
+.lic-row input{flex:1;min-width:0}
+.btn-verify{padding:.45rem .75rem;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-weight:500;white-space:nowrap}
+.lic-status{font-size:11px;margin-top:.375rem;min-height:14px;color:var(--muted)}
+/* TABS CSV/PASTE */
+.tab-row{display:flex;gap:4px;margin-bottom:.75rem}
+.tab{flex:1;padding:.4rem;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;cursor:pointer;text-align:center;transition:.15s}
+.tab.on{background:rgba(255,153,0,.15);border-color:rgba(255,153,0,.4);color:var(--amazon)}
+.drop-zone{border:2px dashed var(--border);border-radius:8px;padding:1.25rem;text-align:center;cursor:pointer;transition:.2s;color:var(--muted);font-size:13px}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--amazon);background:rgba(255,153,0,.05);color:var(--text)}
+.drop-icon{font-size:28px;margin-bottom:.375rem}
+#file-input{display:none}
+.col-map{display:none;margin-top:.75rem;flex-direction:column;gap:.375rem}
+.col-map.open{display:flex}
+.col-row{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;align-items:center;font-size:12px;color:var(--muted)}
+.col-sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:.3rem .5rem;border-radius:5px;font-size:11px;width:100%;outline:none}
+.csv-preview{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem;font-size:11px;font-family:monospace;color:var(--muted);max-height:70px;overflow:hidden;margin-top:.5rem}
+textarea.si{resize:vertical;min-height:110px;font-family:monospace;font-size:12px}
+.stats-bar{display:none;margin-bottom:.5rem}
+.stats-bar.open{display:block}
+.stats-row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:.25rem}
+.qual-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.qual-fill{height:100%;border-radius:2px;transition:width .6s}
+/* HISTORIQUE */
+.hist-btn{display:flex;align-items:center;gap:.5rem;width:100%;padding:.55rem .75rem;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer;text-align:left;transition:.15s}
+.hist-btn:hover{border-color:var(--amazon);color:var(--text)}
+.hist-panel{display:none;flex-direction:column;gap:.375rem;margin-top:.375rem;max-height:250px;overflow-y:auto}
+.hist-panel.open{display:flex}
+.hist-item{background:var(--surface2);border:.5px solid var(--border);border-radius:8px;padding:.625rem .75rem;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:.625rem}
+.hist-item:hover{border-color:var(--amazon)}
+.hi-icon{font-size:16px;flex-shrink:0}
+.hi-body{flex:1;min-width:0}
+.hi-name{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.hi-meta{font-size:10.5px;color:var(--muted);margin-top:1px}
+.hi-rm{background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;padding:0 .2rem;flex-shrink:0;transition:.15s}
+.hi-rm:hover{color:var(--red)}
+.hist-empty{font-size:12px;color:var(--faint);text-align:center;padding:.875rem}
+.hist-clear{font-size:11px;color:var(--muted);cursor:pointer;text-align:center;padding:.25rem;transition:.15s}
+.hist-clear:hover{color:var(--red)}
+/* COMPARE SLOTS */
+.cmp-wrap{display:none;flex-direction:column;gap:.375rem}
+.cmp-wrap.open{display:flex}
+.cmp-slot{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.6rem .75rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.cs-name{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs-sc{font-size:11px;color:var(--muted)}
+.cs-rm{background:none;border:none;color:var(--faint);cursor:pointer;font-size:14px;padding:0 .2rem}
+.cs-rm:hover{color:var(--red)}
+.btn-main{width:100%;padding:.75rem;background:linear-gradient(135deg,var(--amazon),var(--amazon2));color:#000;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;transition:.2s}
+.btn-main:hover{filter:brightness(1.08)}
+.btn-main:disabled{background:var(--border2);color:var(--muted);cursor:not-allowed}
+.btn-sec{width:100%;padding:.5rem;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12.5px;cursor:pointer;transition:.2s}
+.btn-sec:hover{border-color:var(--amazon);color:var(--amazon)}
+.credit-note{font-size:11px;color:var(--muted);text-align:center;margin-top:.375rem}
+/* STATES */
+.state{display:none}
+.state.on{display:flex}
+.s-empty{flex-direction:column;align-items:center;justify-content:center;min-height:420px;gap:1.25rem;text-align:center}
+.s-empty .ico{font-size:54px;opacity:.3}
+.s-empty h3{font-size:19px;font-weight:600;opacity:.6}
+.s-empty p{font-size:13px;color:var(--muted);max-width:400px;line-height:1.7}
+.s-load{flex-direction:column;align-items:center;justify-content:center;min-height:420px;gap:1.5rem}
+.spinner{width:46px;height:46px;border:3px solid var(--border2);border-top-color:var(--amazon);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{font-size:13px;color:var(--muted);animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+#s-results{display:none}
+#s-results.on{display:block}
+/* SCORES */
+.scores-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.25rem}
+.score-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.875rem;text-align:center}
+.score-num{font-size:38px;font-weight:800;line-height:1;animation:countUp .5s ease-out}
+@keyframes countUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.score-lbl{font-size:11px;color:var(--muted);margin-top:.25rem;text-transform:uppercase;letter-spacing:.06em}
+.c-g{color:var(--green)} .c-o{color:var(--orange)} .c-r{color:var(--red)} .c-b{color:var(--blue)}
+/* PRODUCT HEADER */
+.prod-header{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.125rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.prod-name{font-size:20px;font-weight:700;margin-bottom:.375rem}
+.meta-chips{display:flex;gap:.375rem;flex-wrap:wrap}
+.meta-chip{font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--border);color:var(--muted)}
+.conf-high{border-color:var(--green-b);color:var(--green)}
+.conf-medium{border-color:var(--orange-b);color:var(--orange)}
+.conf-low{border-color:var(--red-b);color:var(--red)}
+/* WARNING */
+.warn-bar{background:var(--orange-bg);border:1px solid var(--orange-b);border-radius:8px;padding:.625rem .875rem;font-size:12.5px;color:var(--orange);margin-bottom:.875rem;display:flex;gap:.5rem;align-items:flex-start}
+/* LISTING TITLE */
+.title-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem 1.125rem;margin-bottom:1.125rem}
+.tc-lbl{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.5rem}
+.tc-val{font-size:13.5px;font-weight:500;color:var(--text);padding:.625rem .875rem;background:var(--surface2);border:1px solid var(--border);border-radius:7px;cursor:pointer;transition:.15s;line-height:1.5}
+.tc-val:hover{border-color:var(--amazon)}
+.tc-hint{font-size:10.5px;color:var(--muted);margin-top:.375rem}
+/* REPORT TABS */
+.rtabs{display:flex;gap:4px;margin-bottom:1rem;overflow-x:auto;flex-wrap:nowrap}
+.rtab{padding:.425rem .875rem;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:.15s}
+.rtab.on{background:rgba(255,153,0,.15);border-color:rgba(255,153,0,.4);color:var(--amazon)}
+.rpanel{display:none}
+.rpanel.on{display:block}
+/* WEAKNESS CARDS */
+.w-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:.75rem;border-left:3px solid transparent}
+.sev-4{border-left-color:var(--red)} .sev-3{border-left-color:var(--orange)} .sev-2{border-left-color:var(--amazon)} .sev-1{border-left-color:var(--muted)}
+.wc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.wc-theme{font-size:13px;font-weight:500}
+.wc-badges{display:flex;gap:.375rem}
+.badge{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500}
+.br{background:var(--red-bg);color:var(--red)} .bo{background:var(--orange-bg);color:var(--orange)}
+.bg{background:var(--green-bg);color:var(--green)} .bm{background:var(--surface2);color:var(--muted)}
+.bb{background:var(--blue-bg);color:var(--blue)}
+.wc-sum{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:.5rem}
+.wc-fix{font-size:12px;color:var(--green);padding:.375rem .625rem;background:var(--green-bg);border-radius:5px;border:1px solid var(--green-b)}
+/* FREQ BARS */
+.freq-item{display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem}
+.freq-label{font-size:12.5px;color:var(--text);min-width:180px;flex-shrink:0}
+.freq-bar{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.freq-fill{height:100%;border-radius:3px}
+.freq-pct{font-size:11px;color:var(--muted);min-width:32px;text-align:right}
+/* RISK METER */
+.risk-meter{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.125rem;margin-bottom:1rem}
+.risk-track{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--green),var(--orange),var(--red));position:relative;margin:.75rem 0}
+.risk-needle{position:absolute;top:-4px;width:20px;height:20px;background:var(--text);border-radius:50%;transform:translateX(-50%);border:2px solid var(--bg);transition:left .8s ease}
+.risk-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+/* VOICE */
+.benefit-chips{display:flex;flex-wrap:wrap;gap:.375rem;margin-bottom:.875rem}
+.b-chip{background:var(--blue-bg);border:1px solid rgba(74,144,226,.3);color:var(--blue);padding:.25rem .625rem;border-radius:4px;font-size:12px}
+.bullet-list{display:flex;flex-direction:column;gap:.5rem}
+.bullet-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;font-size:13px;line-height:1.6;display:flex;gap:.625rem}
+.bullet-icon{font-size:16px;flex-shrink:0}
+/* BRIEF TABLE */
+.brief-table{width:100%;border-collapse:collapse}
+.brief-table th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:.4rem .625rem;border-bottom:1px solid var(--border)}
+.brief-table td{padding:.5rem .625rem;border-bottom:1px solid rgba(45,53,80,.5);font-size:12.5px;vertical-align:top;line-height:1.5}
+.pM{color:var(--red);font-weight:500} .pS{color:var(--orange)} .pC{color:var(--muted)}
+/* THEMES */
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.625rem}
+.theme-cell{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.75rem}
+.tc-label{font-size:11px;color:var(--muted);margin-bottom:.25rem}
+.tc-v{font-size:13px;font-weight:500}
+.tc-bar{height:3px;border-radius:2px;background:var(--border);margin-top:.375rem;overflow:hidden}
+.fill-neg{background:var(--red)} .fill-pos{background:var(--green)} .fill-neu{background:var(--muted)} .fill-mix{background:var(--orange)}
+/* COMPARE */
+.cmp-matrix{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:1rem}
+.cmp-matrix th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:.5rem .75rem;border-bottom:1px solid var(--border)}
+.cmp-matrix td{padding:.55rem .75rem;border-bottom:1px solid rgba(45,53,80,.5);vertical-align:top;line-height:1.5}
+/* EXPORT */
+.exp-bar{display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap}
+.btn-exp{padding:.4rem .875rem;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:12px;cursor:pointer;transition:.15s}
+.btn-exp:hover{border-color:var(--amazon);color:var(--amazon)}
+/* UPGRADE MODAL */
+.plan-row{display:flex;align-items:center;gap:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.875rem 1rem;text-decoration:none;color:var(--text);transition:.2s;position:relative;margin-bottom:.5rem}
+.plan-row:hover{border-color:var(--amazon);background:rgba(255,153,0,.06)}
+.plan-featured{border-color:rgba(255,153,0,.4);background:rgba(255,153,0,.06)}
+.plan-name{font-size:13.5px;font-weight:600;margin-bottom:.125rem}
+.plan-quota{font-size:11px;font-weight:400;color:var(--amazon);background:rgba(255,153,0,.12);padding:1px 7px;border-radius:4px;margin-left:.375rem}
+.plan-desc{font-size:11.5px;color:var(--muted)}
+.plan-price{font-size:20px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.plan-price span{font-size:11px;color:var(--muted);font-weight:400}
+.notice{font-size:11px;color:var(--muted);line-height:1.55;padding:.375rem .5rem;border-left:2px solid var(--border2);margin-top:.375rem}
+@media(max-width:880px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{position:static;max-height:none}
+  .scores-row{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-mark">⭐</div>
+    ARI <span class="logo-by">by Éclozia</span>
+  </div>
+  <div class="topbar-right">
+    <select class="lang-sel" id="ui-lang" onchange="switchLang(this.value)">
+      <option value="en">🇬🇧 English</option>
+      <option value="fr">🇫🇷 Français</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="de">🇩🇪 Deutsch</option>
+      <option value="pt">🇧🇷 Português</option>
+    </select>
+    <span class="quota-badge" id="quota-badge" onclick="openUpgrade()">Trial — 3 analyses</span>
+    <button class="btn-upgrade" onclick="openUpgrade()">⚡ Upgrade</button>
+  </div>
+</div>
+
+<!-- UPGRADE MODAL -->
+<div id="upgrade-overlay" onclick="if(event.target===this)closeUpgrade()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:520px;width:100%;padding:2rem;position:relative;max-height:90vh;overflow-y:auto">
+    <button onclick="closeUpgrade()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">&#x2715;</button>
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:34px;margin-bottom:.5rem">⭐</div>
+      <div style="font-size:19px;font-weight:700;margin-bottom:.25rem">ARI by Éclozia</div>
+      <div style="font-size:13px;color:var(--muted)">Amazon Review Intelligence — Accès immédiat après achat</div>
+    </div>
+    <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.625rem">Abonnements mensuels</div>
+    <a href="https://eclozia.gumroad.com/l/ari-seller" target="_blank" class="plan-row">
+      <div style="flex:1"><div class="plan-name">Seller <span class="plan-quota">30 analyses/mois</span></div><div class="plan-desc">Idéal pour les vendeurs Amazon actifs</div></div>
+      <div class="plan-price">19 CAD<span>/mois</span></div>
+    </a>
+    <a href="https://eclozia.gumroad.com/l/ari-agency" target="_blank" class="plan-row plan-featured" style="margin-bottom:1.25rem">
+      <div style="position:absolute;top:-.625rem;left:1rem;background:var(--amazon);color:#000;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase">Populaire</div>
+      <div style="flex:1"><div class="plan-name">Agency <span class="plan-quota">100 analyses/mois</span></div><div class="plan-desc">Pour agences et vendeurs multi-produits</div></div>
+      <div class="plan-price">49 CAD<span>/mois</span></div>
+    </a>
+    <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.625rem">Packs crédits (sans expiration)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:1.25rem">
+      <a href="https://eclozia.gumroad.com/l/ari-5" target="_blank" class="plan-row" style="flex-direction:column;gap:.2rem;align-items:flex-start">
+        <div class="plan-name">Pack Starter</div>
+        <div class="plan-quota" style="margin-left:0">5 analyses</div>
+        <div class="plan-price" style="font-size:17px">9,99 CAD</div>
+      </a>
+      <a href="https://eclozia.gumroad.com/l/ari-20" target="_blank" class="plan-row plan-featured" style="flex-direction:column;gap:.2rem;align-items:flex-start">
+        <div class="plan-name">Pack Growth</div>
+        <div class="plan-quota" style="margin-left:0">20 analyses</div>
+        <div class="plan-price" style="font-size:17px">29,99 CAD</div>
+      </a>
+      <a href="https://eclozia.gumroad.com/l/ari-60" target="_blank" class="plan-row" style="flex-direction:column;gap:.2rem;align-items:flex-start">
+        <div class="plan-name">Pack Pro</div>
+        <div class="plan-quota" style="margin-left:0">60 analyses</div>
+        <div class="plan-price" style="font-size:17px">69,99 CAD</div>
+      </a>
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-align:center;line-height:1.7;padding:.75rem;background:var(--surface2);border-radius:8px">
+      Après achat → clé de licence reçue par email → coller dans le champ "License key" en haut à gauche.
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+<div class="sidebar">
+
+  <div class="lic-box">
+    <div class="sl" data-i18n="licLabel">License key</div>
+    <div class="lic-row">
+      <input class="si" id="lic-key" type="text" placeholder="XXXX-XXXX-XXXX-XXXX">
+      <button class="btn-verify" onclick="verifyLicense()" data-i18n="licVerify">Verify</button>
+    </div>
+    <div class="lic-status" id="lic-status"></div>
+  </div>
+
+  <div>
+    <div class="sl" data-i18n="prodLabel">Product name</div>
+    <input class="si" id="prod-name" data-i18n-ph="prodPh" placeholder="e.g. Wireless Earbuds X200">
+  </div>
+
+  <div>
+    <div class="sl" data-i18n="langLabel">Analysis language</div>
+    <select class="si" id="al">
+      <option value="en">English</option><option value="fr">Français</option>
+      <option value="es">Español</option><option value="de">Deutsch</option><option value="pt">Português</option>
+    </select>
+  </div>
+
+  <div>
+    <div class="sl" data-i18n="importLabel">Import reviews</div>
+    <div class="tab-row">
+      <div class="tab on" id="tab-csv" onclick="setTab('csv')" data-i18n="tabCSV">CSV / Excel</div>
+      <div class="tab" id="tab-paste" onclick="setTab('paste')" data-i18n="tabPaste">Paste text</div>
+    </div>
+    <div id="panel-csv">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <div class="drop-icon">📁</div>
+        <div data-i18n="dropTitle">Drop CSV / XLSX here</div>
+        <div style="font-size:11px;margin-top:.25rem" data-i18n="dropSub">or click to browse</div>
+      </div>
+      <input type="file" id="file-input" accept=".csv,.xlsx,.xls,.tsv" onchange="handleFile(event)">
+      <div class="col-map" id="col-map">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:.25rem" data-i18n="mapHint">Map your columns:</div>
+        <div class="col-row"><span data-i18n="colText">Review text</span><select class="col-sel" id="col-text"></select></div>
+        <div class="col-row"><span data-i18n="colRating">Rating (1–5)</span><select class="col-sel" id="col-rating"></select></div>
+        <div class="col-row"><span data-i18n="colDate">Date</span><select class="col-sel" id="col-date"></select></div>
+        <div class="col-row"><span data-i18n="colVariant">Variant</span><select class="col-sel" id="col-variant"></select></div>
+      </div>
+      <div id="csv-preview" class="csv-preview" style="display:none"></div>
+    </div>
+    <div id="panel-paste" style="display:none">
+      <textarea class="si" id="paste-area" data-i18n-ph="pastePh" placeholder="Paste reviews here, one per line.&#10;Format: [rating] text&#10;e.g: 2 Battery dies after 2 hours...&#10;5 Best purchase ever!"></textarea>
+      <div class="notice" data-i18n="pasteNotice">Each line = one review. Optionally start with 1–5 for the rating.</div>
+    </div>
+  </div>
+
+  <div class="stats-bar" id="stats-bar">
+    <div class="stats-row">
+      <span id="stat-count"></span>
+      <span id="stat-qual"></span>
+    </div>
+    <div class="qual-bar"><div class="qual-fill" id="qual-fill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Historique -->
+  <div>
+    <button class="hist-btn" onclick="toggleHist()">
+      <span>🕐</span><span data-i18n="histLabel">Analysis history</span>
+      <span style="margin-left:auto;font-size:10px" id="hist-count"></span>
+    </button>
+    <div class="hist-panel" id="hist-panel">
+      <div id="hist-list"></div>
+      <div class="hist-clear" onclick="clearHistory()" data-i18n="histClear">🗑 Clear history</div>
+    </div>
+  </div>
+
+  <!-- Compare -->
+  <div class="cmp-wrap" id="cmp-wrap">
+    <div class="sl" data-i18n="cmpLabel">Compare products</div>
+    <div id="cmp-slots"></div>
+    <button class="btn-sec" onclick="runCompare()" data-i18n="cmpBtn">Compare now →</button>
+  </div>
+
+  <div>
+    <button class="btn-main" id="btn-go" onclick="runAnalysis()" disabled data-i18n="goBtn">Analyse reviews →</button>
+    <div class="credit-note" data-i18n="costNote">1 credit per product analysis</div>
+  </div>
+
+</div>
+
+<div class="main">
+  <div class="state s-empty on" id="s-empty">
+    <div class="ico">⭐</div>
+    <h3 data-i18n="emptyTitle">Import reviews to get started</h3>
+    <p data-i18n="emptyDesc">Upload a CSV from your Amazon account or paste reviews directly. Our AI identifies weaknesses, opportunities, and marketing angles.</p>
+  </div>
+  <div class="state s-load" id="s-load">
+    <div class="spinner"></div>
+    <div class="load-txt" id="load-txt" data-i18n="loadTxt">Analyzing reviews…</div>
+    <div style="font-size:12px;color:var(--muted)" data-i18n="loadNote">Usually 20–40 seconds</div>
+  </div>
+  <div id="s-results"></div>
+</div>
+</div>
+
+<script>
+const I18N={
+  en:{licLabel:'License key',licVerify:'Verify',prodLabel:'Product name',prodPh:'e.g. Wireless Earbuds X200',langLabel:'Analysis language',importLabel:'Import reviews',tabCSV:'CSV / Excel',tabPaste:'Paste text',dropTitle:'Drop CSV / XLSX here',dropSub:'or click to browse',mapHint:'Map your columns:',colText:'Review text',colRating:'Rating (1–5)',colDate:'Date',colVariant:'Variant',pastePh:'Paste reviews, one per line.\nFormat: [rating] text\n2 Battery dies after 2h...\n5 Best purchase ever!',pasteNotice:'Each line = one review. Start with 1–5 for the rating.',histLabel:'Analysis history',histClear:'🗑 Clear history',cmpLabel:'Compare products',cmpBtn:'Compare now →',goBtn:'Analyse reviews →',costNote:'1 credit per product analysis',emptyTitle:'Import reviews to get started',emptyDesc:'Upload a CSV from your Amazon account or paste reviews. Our AI identifies weaknesses, opportunities, and marketing angles.',loadTxt:'Analyzing reviews…',loadNote:'Usually 20–40 seconds',tabWeaknesses:'⚠️ Weaknesses',tabStrengths:'✅ Strengths',tabFeatures:'💡 Requests',tabReturn:'🔄 Return Risk',tabVoice:'✍️ Voice',tabBrief:'📋 Brief',tabThemes:'🏷️ Themes',oppScore:'Opportunity',returnRisk:'Return risk',dataQuality:'Data quality',confHigh:'High confidence',confMedium:'Medium confidence',confLow:'Low confidence',sev:'Severity',freq:'Frequency',fix:'Fix →',noData:'—',listingTitle:'Suggested Amazon title',clickCopy:'Click to copy',warnLow:'Low volume warning: fewer than 30 usable reviews.',warnQual:'Quality warning: many reviews are very short.',saveCompare:'Save to compare',priority:'Priority',problem:'Problem',requirement:'Requirement',evidence:'Evidence',returnLabel:'Return risk score',returnTriggers:'Main triggers',benefits:'Top benefits mentioned',bullets:'Marketing copy (ready to use)',bulletNote:'Review before publishing to your listing.',themeBreakdown:'Theme breakdown',mentions:'mentions',expJSON:'Export JSON',expCSV:'Export CSV',expBrief:'Export Brief',cmpTitle:'Product comparison',cmpGap:'Market gap',cmpAngles:'Differentiation angles',cmpFocus:'Recommended focus',cmpAction:'Action plan'},
+  fr:{licLabel:'Clé de licence',licVerify:'Vérifier',prodLabel:'Nom du produit',prodPh:'ex. Écouteurs sans fil X200',langLabel:'Langue analyse',importLabel:'Importer les avis',tabCSV:'CSV / Excel',tabPaste:'Coller du texte',dropTitle:'Déposer CSV / XLSX ici',dropSub:'ou cliquer pour parcourir',mapHint:'Associer vos colonnes :',colText:'Texte avis',colRating:'Note (1–5)',colDate:'Date',colVariant:'Variante',pastePh:'Collez vos avis ici, un par ligne.\nFormat : [note] texte\n2 La batterie tombe après 2h...\n5 Meilleur achat !',pasteNotice:'Un avis par ligne. Commencez par 1–5 pour la note.',histLabel:'Historique des analyses',histClear:'🗑 Effacer',cmpLabel:'Comparer des produits',cmpBtn:'Comparer →',goBtn:'Analyser les avis →',costNote:'1 crédit par analyse produit',emptyTitle:'Importez des avis pour commencer',emptyDesc:'Déposez un CSV depuis votre compte Amazon ou collez des avis. Notre IA identifie les faiblesses, opportunités et angles marketing.',loadTxt:'Analyse des avis en cours…',loadNote:'Généralement 20–40 secondes',tabWeaknesses:'⚠️ Faiblesses',tabStrengths:'✅ Points forts',tabFeatures:'💡 Demandes',tabReturn:'🔄 Risque retour',tabVoice:'✍️ Voix client',tabBrief:'📋 Cahier des charges',tabThemes:'🏷️ Thèmes',oppScore:'Opportunité',returnRisk:'Risque retour',dataQuality:'Qualité données',confHigh:'Confiance élevée',confMedium:'Confiance moyenne',confLow:'Confiance faible',sev:'Gravité',freq:'Fréquence',fix:'Correction →',noData:'—',listingTitle:'Titre Amazon suggéré',clickCopy:'Cliquer pour copier',warnLow:'Volume faible : moins de 30 avis exploitables.',warnQual:'Qualité faible : beaucoup d\'avis très courts.',saveCompare:'Sauvegarder pour comparer',priority:'Priorité',problem:'Problème',requirement:'Exigence',evidence:'Preuve',returnLabel:'Score de risque retour',returnTriggers:'Principaux déclencheurs',benefits:'Bénéfices mentionnés',bullets:'Copy marketing (prêt à l\'emploi)',bulletNote:'Valider avant publication dans votre fiche.',themeBreakdown:'Répartition par thème',mentions:'mentions',expJSON:'Exporter JSON',expCSV:'Exporter CSV',expBrief:'Exporter Cahier',cmpTitle:'Comparaison produits',cmpGap:'Écart de marché',cmpAngles:'Angles de différenciation',cmpFocus:'Focus recommandé',cmpAction:'Plan d\'action'},
+  es:{licLabel:'Clave licencia',licVerify:'Verificar',prodLabel:'Nombre del producto',prodPh:'ej. Auriculares X200',langLabel:'Idioma análisis',importLabel:'Importar reseñas',tabCSV:'CSV / Excel',tabPaste:'Pegar texto',dropTitle:'Arrastra CSV aquí',dropSub:'o haz clic',mapHint:'Asigna columnas:',colText:'Texto reseña',colRating:'Puntuación (1–5)',colDate:'Fecha',colVariant:'Variante',pastePh:'Pega reseñas, una por línea.\n2 La batería dura 2h...\n5 La mejor compra!',pasteNotice:'Una reseña por línea.',histLabel:'Historial de análisis',histClear:'🗑 Borrar',cmpLabel:'Comparar productos',cmpBtn:'Comparar →',goBtn:'Analizar reseñas →',costNote:'1 crédito por análisis',emptyTitle:'Importa reseñas para empezar',emptyDesc:'Sube un CSV de Amazon o pega reseñas.',loadTxt:'Analizando reseñas…',loadNote:'Generalmente 20–40 segundos',tabWeaknesses:'⚠️ Debilidades',tabStrengths:'✅ Fortalezas',tabFeatures:'💡 Solicitudes',tabReturn:'🔄 Riesgo devolución',tabVoice:'✍️ Voz cliente',tabBrief:'📋 Brief',tabThemes:'🏷️ Temas',oppScore:'Oportunidad',returnRisk:'Riesgo devolución',dataQuality:'Calidad datos',confHigh:'Alta confianza',confMedium:'Confianza media',confLow:'Baja confianza',sev:'Gravedad',freq:'Frecuencia',fix:'Solución →',noData:'—',listingTitle:'Título Amazon sugerido',clickCopy:'Clic para copiar',warnLow:'Volumen bajo: menos de 30 reseñas.',warnQual:'Calidad baja.',saveCompare:'Guardar para comparar',priority:'Prioridad',problem:'Problema',requirement:'Requisito',evidence:'Evidencia',returnLabel:'Puntuación riesgo',returnTriggers:'Factores principales',benefits:'Beneficios mencionados',bullets:'Copy marketing',bulletNote:'Revisar antes de publicar.',themeBreakdown:'Desglose temas',mentions:'menciones',expJSON:'Exportar JSON',expCSV:'Exportar CSV',expBrief:'Exportar Brief',cmpTitle:'Comparación productos',cmpGap:'Brecha de mercado',cmpAngles:'Ángulos diferenciación',cmpFocus:'Foco recomendado',cmpAction:'Plan de acción'},
+  de:{licLabel:'Lizenzschlüssel',licVerify:'Prüfen',prodLabel:'Produktname',prodPh:'z.B. Kabellose Kopfhörer X200',langLabel:'Analysesprache',importLabel:'Bewertungen importieren',tabCSV:'CSV / Excel',tabPaste:'Text einfügen',dropTitle:'CSV hier ablegen',dropSub:'oder klicken',mapHint:'Spalten zuweisen:',colText:'Bewertungstext',colRating:'Bewertung (1–5)',colDate:'Datum',colVariant:'Variante',pastePh:'Bewertungen einfügen.\n2 Akku hält nur 2h...\n5 Bester Kauf!',pasteNotice:'Eine Bewertung pro Zeile.',histLabel:'Analyseverlauf',histClear:'🗑 Löschen',cmpLabel:'Produkte vergleichen',cmpBtn:'Vergleichen →',goBtn:'Bewertungen analysieren →',costNote:'1 Kredit pro Analyse',emptyTitle:'Bewertungen importieren',emptyDesc:'CSV hochladen oder Bewertungen einfügen.',loadTxt:'Bewertungen werden analysiert…',loadNote:'Normalerweise 20–40 Sekunden',tabWeaknesses:'⚠️ Schwächen',tabStrengths:'✅ Stärken',tabFeatures:'💡 Anfragen',tabReturn:'🔄 Rückgaberisiko',tabVoice:'✍️ Kundenstimme',tabBrief:'📋 Produktbrief',tabThemes:'🏷️ Themen',oppScore:'Chance',returnRisk:'Rückgaberisiko',dataQuality:'Datenqualität',confHigh:'Hohe Konfidenz',confMedium:'Mittlere Konfidenz',confLow:'Niedrige Konfidenz',sev:'Schweregrad',freq:'Häufigkeit',fix:'Lösung →',noData:'—',listingTitle:'Amazon-Titel Vorschlag',clickCopy:'Klicken zum Kopieren',warnLow:'Wenig Bewertungen.',warnQual:'Qualität niedrig.',saveCompare:'Zum Vergleich speichern',priority:'Priorität',problem:'Problem',requirement:'Anforderung',evidence:'Nachweis',returnLabel:'Rückgaberisiko-Score',returnTriggers:'Hauptauslöser',benefits:'Hauptvorteile',bullets:'Marketing-Texte',bulletNote:'Vor Veröffentlichung prüfen.',themeBreakdown:'Themenübersicht',mentions:'Erwähnungen',expJSON:'JSON exportieren',expCSV:'CSV exportieren',expBrief:'Brief exportieren',cmpTitle:'Produktvergleich',cmpGap:'Marktlücke',cmpAngles:'Differenzierungswinkel',cmpFocus:'Empfohlener Fokus',cmpAction:'Aktionsplan'},
+  pt:{licLabel:'Chave de licença',licVerify:'Verificar',prodLabel:'Nome do produto',prodPh:'ex. Fones de ouvido X200',langLabel:'Idioma análise',importLabel:'Importar avaliações',tabCSV:'CSV / Excel',tabPaste:'Colar texto',dropTitle:'Arraste CSV aqui',dropSub:'ou clique',mapHint:'Mapear colunas:',colText:'Texto avaliação',colRating:'Nota (1–5)',colDate:'Data',colVariant:'Variante',pastePh:'Cole avaliações, uma por linha.\n2 Bateria dura 2h...\n5 Melhor compra!',pasteNotice:'Uma avaliação por linha.',histLabel:'Histórico de análises',histClear:'🗑 Limpar',cmpLabel:'Comparar produtos',cmpBtn:'Comparar →',goBtn:'Analisar avaliações →',costNote:'1 crédito por análise',emptyTitle:'Importe avaliações para começar',emptyDesc:'Carregue um CSV da Amazon ou cole avaliações.',loadTxt:'Analisando avaliações…',loadNote:'Geralmente 20–40 segundos',tabWeaknesses:'⚠️ Fraquezas',tabStrengths:'✅ Pontos fortes',tabFeatures:'💡 Solicitações',tabReturn:'🔄 Risco devolução',tabVoice:'✍️ Voz cliente',tabBrief:'📋 Brief',tabThemes:'🏷️ Temas',oppScore:'Oportunidade',returnRisk:'Risco devolução',dataQuality:'Qualidade dados',confHigh:'Alta confiança',confMedium:'Confiança média',confLow:'Baixa confiança',sev:'Gravidade',freq:'Frequência',fix:'Solução →',noData:'—',listingTitle:'Título Amazon sugerido',clickCopy:'Clique para copiar',warnLow:'Volume baixo: menos de 30 avaliações.',warnQual:'Qualidade baixa.',saveCompare:'Salvar para comparar',priority:'Prioridade',problem:'Problema',requirement:'Requisito',evidence:'Evidência',returnLabel:'Pontuação risco',returnTriggers:'Fatores principais',benefits:'Benefícios mencionados',bullets:'Textos de marketing',bulletNote:'Revise antes de publicar.',themeBreakdown:'Distribuição temas',mentions:'menções',expJSON:'Exportar JSON',expCSV:'Exportar CSV',expBrief:'Exportar Brief',cmpTitle:'Comparação produtos',cmpGap:'Lacuna de mercado',cmpAngles:'Ângulos de diferenciação',cmpFocus:'Foco recomendado',cmpAction:'Plano de ação'},
+};
+const SERVER='https://kdp-serveur.onrender.com';
+const HIST_KEY='ari_history';
+let uiLang='en',lastResult=null,savedProjects=[],activeTab='weaknesses',parsedReviews=[],csvHeaders=[];
+let deviceId=localStorage.getItem('ari_d')||('ari-'+Math.random().toString(36).slice(2,10));
+localStorage.setItem('ari_d',deviceId);
+const t=k=>(I18N[uiLang]||I18N.en)[k]||k;
+
+function switchLang(l){uiLang=l;document.querySelectorAll('[data-i18n]').forEach(el=>{const v=(I18N[l]||I18N.en)[el.dataset.i18n];if(v!==undefined)el.textContent=v;});document.querySelectorAll('[data-i18n-ph]').forEach(el=>{const v=(I18N[l]||I18N.en)[el.dataset.i18nPh];if(v!==undefined)el.placeholder=v;});if(lastResult)renderResults(lastResult);}
+function showState(s){document.getElementById('s-empty').className='state s-empty'+(s==='empty'?' on':'');document.getElementById('s-load').className='state s-load'+(s==='load'?' on':'');document.getElementById('s-results').className=s==='results'?'on':'';}
+function showErr(msg){showState('empty');document.getElementById('s-empty').innerHTML=`<div class="ico">⚠️</div><h3>Error</h3><p style="color:var(--red);max-width:380px">${msg}</p>`;}
+function openUpgrade(){document.getElementById('upgrade-overlay').style.display='flex';document.body.style.overflow='hidden';}
+function closeUpgrade(){document.getElementById('upgrade-overlay').style.display='none';document.body.style.overflow='';}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeUpgrade();});
+function updateQuota(n){const el=document.getElementById('quota-badge');if(n===null||n===undefined)return;el.textContent=n+' analyses';el.classList.toggle('depleted',n<=0);}
+
+// LICENCE
+async function verifyLicense(){
+  const key=document.getElementById('lic-key').value.trim();
+  const el=document.getElementById('lic-status');
+  if(!key)return;el.textContent='⏳…';
+  try{
+    const r=await fetch(SERVER+'/verifier-licence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({license:key,deviceId})});
+    const d=await r.json();
+    if(d.active){const n=d.restant!=null?d.restant:'∞';const p=d.plan==='abo'?'Abonnement':d.plan==='credits'?'Crédits':'Dev';el.innerHTML=`<span style="color:var(--green)">✓ ${p} — ${n} analyses</span>`;updateQuota(d.restant);}
+    else if(d.plan==='trial'){el.innerHTML=`<span style="color:var(--orange)">Essai — ${d.restant??0} analyses</span>`;updateQuota(d.restant);}
+    else{el.innerHTML=`<span style="color:var(--red)">✗ Clé invalide ou expirée</span>`;}
+  }catch(e){el.innerHTML=`<span style="color:var(--red)">✗ Erreur connexion</span>`;}
+}
+
+// CSV/PASTE
+function setTab(tab){
+  document.getElementById('tab-csv').className='tab'+(tab==='csv'?' on':'');
+  document.getElementById('tab-paste').className='tab'+(tab==='paste'?' on':'');
+  document.getElementById('panel-csv').style.display=tab==='csv'?'':'none';
+  document.getElementById('panel-paste').style.display=tab==='paste'?'':'none';
+}
+function handleDrop(e){e.preventDefault();document.getElementById('drop-zone').classList.remove('drag');if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0]);}
+function handleFile(e){if(e.target.files[0])processFile(e.target.files[0]);}
+function processFile(file){
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(['xlsx','xls'].includes(ext)){
+    const rd=new FileReader();rd.onload=ev=>loadXLSX(ev.target.result);rd.readAsArrayBuffer(file);
+  } else {const rd=new FileReader();rd.onload=ev=>parseCSV(ev.target.result);rd.readAsText(file,'UTF-8');}
+}
+function parseCSV(text){
+  const lines=text.trim().split(/\r?\n/);if(lines.length<2)return;
+  const delims=[',',';','\t','|'];const counts=delims.map(d=>(lines[0].match(new RegExp('\\'+d,'g'))||[]).length);
+  const delim=delims[counts.indexOf(Math.max(...counts))];
+  csvHeaders=lines[0].split(delim).map(h=>h.trim().replace(/^"|"$/g,''));
+  const rows=lines.slice(1).map(l=>l.split(delim).map(c=>c.trim().replace(/^"|"$/g,'')));
+  populateMapping(csvHeaders);previewCSV(rows.slice(0,3));window._csvRows=rows;updateParsed();
+}
+function loadXLSX(buf){
+  if(typeof XLSX==='undefined'){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=()=>{doXLSX(buf);};document.head.appendChild(s);}
+  else doXLSX(buf);
+}
+function doXLSX(buf){
+  const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  if(data.length<2)return;
+  csvHeaders=data[0].map(String);const rows=data.slice(1).map(r=>r.map(String));
+  populateMapping(csvHeaders);previewCSV(rows.slice(0,3));window._csvRows=rows;updateParsed();
+}
+function populateMapping(headers){
+  ['col-text','col-rating','col-date','col-variant'].forEach(id=>{
+    const sel=document.getElementById(id);
+    sel.innerHTML='<option value="">—</option>'+headers.map((h,i)=>`<option value="${i}">${h}</option>`).join('');
+  });
+  const autoMap={'col-text':['review_body','body','review_text','text','content','review','comment'],'col-rating':['star_rating','rating','stars','note','bewertung','nota','star rating'],'col-date':['review_date','date','fecha','datum','data'],'col-variant':['variant','asin','variante']};
+  headers.forEach((h,i)=>{const lower=h.toLowerCase();Object.entries(autoMap).forEach(([id,cands])=>{if(cands.some(c=>lower.includes(c))){const el=document.getElementById(id);if(el.value==='')el.value=i;}});});
+  document.getElementById('col-map').classList.add('open');
+  ['col-text','col-rating'].forEach(id=>document.getElementById(id).addEventListener('change',updateParsed));
+  updateParsed();
+}
+function updateParsed(){
+  if(!window._csvRows)return;
+  const ti=document.getElementById('col-text').value;const ri=document.getElementById('col-rating').value;
+  if(ti===''){parsedReviews=[];updateStats();return;}
+  parsedReviews=window._csvRows.map(r=>({text:r[ti]||'',rating:ri!==''?parseInt(r[ri],10)||null:null,date:null,asin:null})).filter(r=>r.text.length>0);
+  updateStats();
+}
+function previewCSV(rows){const el=document.getElementById('csv-preview');el.style.display='block';el.textContent=csvHeaders.join(' | ')+'\n'+rows.map(r=>r.join(' | ')).join('\n');}
+function updateStats(){
+  const n=parsedReviews.length;
+  const withT=parsedReviews.filter(r=>(r.text||'').split(' ').length>=15).length;
+  const qual=Math.round((withT/Math.max(n,1))*Math.min(n/50,1)*100);
+  const bar=document.getElementById('stats-bar');
+  if(n===0){bar.classList.remove('open');document.getElementById('btn-go').disabled=true;return;}
+  bar.classList.add('open');
+  document.getElementById('stat-count').textContent=n.toLocaleString()+' reviews';
+  document.getElementById('stat-qual').textContent='Quality: '+qual+'%';
+  const fill=document.getElementById('qual-fill');fill.style.width=qual+'%';fill.style.background=qual>=70?'var(--green)':qual>=40?'var(--orange)':'var(--red)';
+  document.getElementById('btn-go').disabled=n<3;
+}
+document.getElementById('paste-area').addEventListener('input',()=>{
+  const lines=document.getElementById('paste-area').value.trim().split(/\r?\n/).filter(l=>l.trim());
+  parsedReviews=lines.map(l=>{const m=l.match(/^([1-5])\s+(.+)/);return m?{text:m[2].trim(),rating:parseInt(m[1]),date:null,asin:null}:{text:l.trim(),rating:null,date:null,asin:null};});
+  updateStats();
+});
+
+// ANALYSIS
+async function runAnalysis(){
+  if(parsedReviews.length<3)return;
+  const productName=document.getElementById('prod-name').value.trim()||'Product';
+  const lang=document.getElementById('al').value;
+  showState('load');
+  try{
+    const r=await fetch(SERVER+'/ari/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,licenseKey:document.getElementById('lic-key').value.trim()||null,license:document.getElementById('lic-key').value.trim()||null,reviews:parsedReviews,productName,lang})});
+    const data=await r.json();
+    if(!r.ok||data.error){if(data.error==='quota_atteint'){showErr(data.message);setTimeout(openUpgrade,600);return;}showErr(data.message||data.error);return;}
+    lastResult=data;
+    if(data.restant!=null)updateQuota(data.restant);
+    renderResults(data);addToHistory(data);pushToCompare(data);
+  }catch(e){showErr('Connection error: '+e.message);}
+}
+
+// RENDER
+function sc(v){return v>=65?'c-g':v>=40?'c-o':'c-r';}
+function fc(v){return v>=65?'var(--green)':v>=40?'var(--orange)':'var(--red)';}
+function sevBadge(s){const cls={1:'bm',2:'bo',3:'bo',4:'br'}[s]||'bm';return `<span class="badge ${cls}">${t('sev')} ${s}/4</span>`;}
+function freqBadge(p){return `<span class="badge ${p>=30?'br':p>=15?'bo':'bm'}">${Math.round(p)}% ${t('freq')}</span>`;}
+
+function renderResults(data){
+  showState('results');
+  const{scores,reports,meta,productName}=data;
+  const tabs=['weaknesses','strengths','features','return','voice','brief','themes'];
+  if(savedProjects.length>=2)tabs.push('compare');
+
+  const warns=(meta.warnings||[]).map(w=>`<div class="warn-bar"><span>⚠️</span><span>${w.code==='low_volume'?t('warnLow'):t('warnQual')}</span></div>`).join('');
+
+  document.getElementById('s-results').innerHTML=`
+    <div class="prod-header">
+      <div>
+        <div class="prod-name">${productName}</div>
+        <div class="meta-chips">
+          <span class="meta-chip conf-${meta.confidence}">${t('conf'+meta.confidence.charAt(0).toUpperCase()+meta.confidence.slice(1))}</span>
+          <span class="meta-chip">${meta.reviewsAnalyzed.toLocaleString()} reviews</span>
+          <span class="meta-chip">${meta.lang.toUpperCase()}</span>
+        </div>
+      </div>
+      <button class="btn-sec" style="width:auto;padding:.4rem .875rem;font-size:12px" onclick="pushToCompare(lastResult)">${t('saveCompare')}</button>
+    </div>
+    ${warns}
+    ${reports.listingTitle?`<div class="title-card"><div class="tc-lbl">🏷️ ${t('listingTitle')}</div><div class="tc-val" onclick="copyTitle(this)" data-title="${String(reports.listingTitle).replace(/"/g,'&quot;')}">${reports.listingTitle}</div><div class="tc-hint">👆 ${t('clickCopy')}</div></div>`:''}
+    <div class="scores-row">
+      ${[['opportunity','oppScore'],['returnRisk','returnRisk'],['dataQuality','dataQuality']].map(([k,lbl])=>`<div class="score-card"><div class="score-num ${sc(scores[k]||0)}">${scores[k]||0}</div><div class="score-lbl">${t(lbl)}</div></div>`).join('')}
+    </div>
+    <div class="rtabs">${tabs.map(k=>`<div class="rtab${k===activeTab?' on':''}" onclick="switchTab('${k}')">${t('tab'+k.charAt(0).toUpperCase()+k.slice(1))}</div>`).join('')}</div>
+    ${tabs.map(k=>`<div id="panel-${k}" class="rpanel${k===activeTab?' on':''}">${renderPanel(k,reports,meta)}</div>`).join('')}
+    <div class="exp-bar">
+      <button class="btn-exp" onclick="exportJSON()">${t('expJSON')}</button>
+      <button class="btn-exp" onclick="exportCSV()">${t('expCSV')}</button>
+      <button class="btn-exp" onclick="exportBrief()">${t('expBrief')}</button>
+    </div>
+  `;
+}
+function switchTab(k){activeTab=k;document.querySelectorAll('.rtab').forEach(el=>{el.className='rtab'+(el.getAttribute('onclick').includes("'"+k+"'")?' on':'');});document.querySelectorAll('.rpanel').forEach(el=>{el.className='rpanel'+(el.id==='panel-'+k?' on':'');});}
+function renderPanel(k,r,meta){
+  const tl=meta.themeLabels||{};
+  if(k==='weaknesses'){
+    if(!r.weaknesses?.length)return`<p style="color:var(--muted)">${t('noData')}</p>`;
+    return r.weaknesses.sort((a,b)=>((b.severity||0)*(b.frequency_pct||0))-((a.severity||0)*(a.frequency_pct||0))).map(w=>`<div class="w-card sev-${w.severity||1}"><div class="wc-head"><div class="wc-theme">${tl[w.theme]||w.theme}</div><div class="wc-badges">${sevBadge(w.severity||1)} ${freqBadge(w.frequency_pct||0)}</div></div><div class="wc-sum">${w.summary}</div>${w.improvement?`<div class="wc-fix">${w.improvement}</div>`:''}</div>`).join('');
+  }
+  if(k==='strengths'){
+    if(!r.strengths?.length)return`<p style="color:var(--muted)">${t('noData')}</p>`;
+    return r.strengths.map(s=>`<div class="w-card" style="border-left-color:var(--green)"><div class="wc-head"><div class="wc-theme">${tl[s.theme]||s.theme}</div><div class="wc-badges"><span class="badge bg">✓</span> ${freqBadge(s.frequency_pct||0)}</div></div><div class="wc-sum">${s.summary}</div></div>`).join('');
+  }
+  if(k==='features'){
+    if(!r.featureRequests?.length)return`<p style="color:var(--muted)">${t('noData')}</p>`;
+    return r.featureRequests.sort((a,b)=>(b.frequency_pct||0)-(a.frequency_pct||0)).map(f=>`<div class="freq-item"><div class="freq-label">${f.request} <span class="badge ${f.type==='explicit'?'bb':'bm'}" style="margin-left:.3rem">${f.type}</span></div><div class="freq-bar"><div class="freq-fill" style="width:${f.frequency_pct||0}%;background:var(--blue)"></div></div><div class="freq-pct">${Math.round(f.frequency_pct||0)}%</div></div>`).join('');
+  }
+  if(k==='return'){
+    const rk=r.returnRisk||{};const score=rk.score||0;
+    const trigs=(rk.main_triggers||[]).map(t=>tl[t]||t).join(', ');
+    return`<div class="risk-meter"><div style="font-size:13px;font-weight:500;margin-bottom:.25rem">${t('returnLabel')}</div><div style="font-size:38px;font-weight:800;color:${score>=60?'var(--red)':score>=35?'var(--orange)':'var(--green)'}">${score}/100</div><div class="risk-track"><div class="risk-needle" style="left:${score}%"></div></div><div class="risk-labels"><span>Low</span><span>Medium</span><span>High</span></div></div>${trigs?`<div style="font-size:13px;color:var(--muted);margin-bottom:.75rem"><strong style="color:var(--text)">${t('returnTriggers')} :</strong> ${trigs}</div>`:''}<div class="w-card" style="border-left-color:${score>=60?'var(--red)':score>=35?'var(--orange)':'var(--muted)'}"><div class="wc-sum">${rk.summary||''}</div></div>`;
+  }
+  if(k==='voice'){
+    const vm=r.voiceMining||{};
+    const chips=(vm.top_benefits||[]).map(b=>`<span class="b-chip">${b}</span>`).join('');
+    const bullets=(vm.bullets||[]).map(b=>`<div class="bullet-item"><span class="bullet-icon">✦</span><span>${b}</span></div>`).join('');
+    return`<div style="margin-bottom:.875rem"><div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.5rem">${t('benefits')}</div><div class="benefit-chips">${chips}</div></div><div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.5rem">${t('bullets')}</div><div class="bullet-list">${bullets}</div><div class="notice" style="margin-top:.75rem">⚠️ ${t('bulletNote')}</div>`;
+  }
+  if(k==='brief'){
+    if(!r.productBrief?.length)return`<p style="color:var(--muted)">${t('noData')}</p>`;
+    const pc={Must:'pM',Should:'pS',Could:'pC'};
+    return`<table class="brief-table"><thead><tr><th>${t('priority')}</th><th>${t('problem')}</th><th>${t('requirement')}</th><th>${t('evidence')}</th></tr></thead><tbody>${r.productBrief.map(row=>`<tr><td class="${pc[row.priority]||''}">${row.priority}</td><td>${row.problem}</td><td>${row.requirement}</td><td style="color:var(--muted)">${tl[row.evidence_theme]||row.evidence_theme||t('noData')} ${row.frequency_pct?`(${Math.round(row.frequency_pct)}%)`:''}
+</td></tr>`).join('')}</tbody></table>`;
+  }
+  if(k==='themes'){
+    const tb=r.themeBreakdown||{};const fillCls={positive:'fill-pos',negative:'fill-neg',neutral:'fill-neu',mixed:'fill-mix'};
+    return`<div class="theme-grid">${Object.entries(tb).map(([key,v])=>`<div class="theme-cell"><div class="tc-label">${tl[key]||key}</div><div class="tc-v">${v.mentions||0} ${t('mentions')}</div><div style="font-size:11px;color:var(--muted)">${v.sentiment||''} ${v.severity?'· '+t('sev')+' '+v.severity:''}</div><div class="tc-bar"><div class="${fillCls[v.sentiment||'neutral']||'fill-neu'}" style="width:${Math.min((v.mentions||0)*5,100)}%;height:100%;border-radius:2px"></div></div></div>`).join('')}</div>`;
+  }
+  if(k==='compare')return renderComparePanel();
+  return '';
+}
+
+// COMPARE
+function pushToCompare(data){if(!data||savedProjects.find(p=>p.productName===data.productName))return;if(savedProjects.length>=3)savedProjects.shift();savedProjects.push(data);updateCmpSlots();}
+function updateCmpSlots(){
+  const wrap=document.getElementById('cmp-wrap');const slots=document.getElementById('cmp-slots');
+  if(savedProjects.length<1){wrap.classList.remove('open');return;}
+  wrap.classList.add('open');
+  slots.innerHTML=savedProjects.map((p,i)=>`<div class="cmp-slot"><div><div class="cs-name">${p.productName}</div><div class="cs-sc">${t('oppScore')}: ${p.scores?.opportunity}</div></div><button class="cs-rm" onclick="rmCompare(${i})">✕</button></div>`).join('');
+}
+function rmCompare(i){savedProjects.splice(i,1);updateCmpSlots();}
+async function runCompare(){
+  if(savedProjects.length<2)return;
+  showState('load');
+  try{
+    const r=await fetch(SERVER+'/ari/compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId,licenseKey:document.getElementById('lic-key').value.trim()||null,projects:savedProjects,lang:document.getElementById('al').value})});
+    const data=await r.json();
+    renderCompareResult(data);
+  }catch(e){showErr('Compare error: '+e.message);}
+}
+function renderComparePanel(){return`<button class="btn-sec" onclick="runCompare()" style="margin-bottom:1rem">${t('cmpBtn')}</button><div id="cmp-result"></div>`;}
+function renderCompareResult(data){
+  showState('results');
+  const{products,commonWeaknesses,gapAnalysis,themeLabels}=data;
+  document.getElementById('s-results').innerHTML=`
+    <div class="prod-header"><div class="prod-name">${t('cmpTitle')}</div></div>
+    <div class="scores-row">${(products||[]).map(p=>`<div class="score-card"><div class="score-num ${sc(p.scores?.opportunity||0)}">${p.scores?.opportunity||0}</div><div class="score-lbl">${p.name}</div></div>`).join('')}</div>
+    ${gapAnalysis?.gap_opportunity?`<div class="w-card" style="border-left-color:var(--blue);margin-bottom:.75rem"><div class="wc-theme" style="margin-bottom:.375rem">${t('cmpGap')}</div><div class="wc-sum">${gapAnalysis.gap_opportunity}</div></div>`:''}
+    ${(gapAnalysis?.differentiation_angles||[]).length?`<div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.5rem">${t('cmpAngles')}</div><div class="bullet-list">${(gapAnalysis.differentiation_angles||[]).map(a=>`<div class="bullet-item"><span class="bullet-icon">→</span><span>${a}</span></div>`).join('')}</div>`:''}
+    ${gapAnalysis?.recommended_focus?`<div style="font-size:12px;font-weight:500;color:var(--muted);margin:.75rem 0 .375rem">${t('cmpFocus')}</div><div class="w-card" style="border-left-color:var(--green)"><div class="wc-sum">${gapAnalysis.recommended_focus}</div></div>`:''}
+    ${gapAnalysis?.action_plan?`<div style="font-size:12px;font-weight:500;color:var(--muted);margin:.75rem 0 .375rem">${t('cmpAction')}</div><div class="w-card" style="border-left-color:var(--amazon)"><div class="wc-sum">${gapAnalysis.action_plan}</div></div>`:''}
+  `;
+}
+
+// HISTORIQUE
+function loadHistory(){try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]');}catch{return[];}}
+function saveHistory(h){try{localStorage.setItem(HIST_KEY,JSON.stringify(h));}catch{}}
+function addToHistory(data){if(!data?.productName)return;let h=loadHistory();h=h.filter(x=>x.productName!==data.productName);h.unshift({productName:data.productName,score:data.scores?.opportunity||0,reviews:data.meta?.reviewsAnalyzed||0,date:new Date().toLocaleDateString(),ts:Date.now(),full:data});if(h.length>30)h=h.slice(0,30);saveHistory(h);renderHistory();}
+function renderHistory(){
+  const h=loadHistory();const list=document.getElementById('hist-list');const cnt=document.getElementById('hist-count');const clr=document.getElementById('hist-clear');
+  if(!list)return;cnt.textContent=h.length?h.length:'';
+  if(!h.length){list.innerHTML=`<div class="hist-empty">Aucune analyse</div>`;if(clr)clr.style.display='none';return;}
+  if(clr)clr.style.display='';
+  list.innerHTML=h.map((item,i)=>`<div class="hist-item" onclick="loadFromHistory(${i})"><div class="hi-icon">⭐</div><div class="hi-body"><div class="hi-name">${item.productName}</div><div class="hi-meta">${item.score}/100 · ${item.reviews} avis · ${item.date}</div></div><button class="hi-rm" onclick="event.stopPropagation();removeFromHistory(${i})">✕</button></div>`).join('');
+}
+function loadFromHistory(i){const h=loadHistory();const item=h[i];if(!item?.full)return;lastResult=item.full;activeTab='weaknesses';renderResults(item.full);document.getElementById('hist-panel').classList.remove('open');}
+function removeFromHistory(i){let h=loadHistory();h.splice(i,1);saveHistory(h);renderHistory();}
+function clearHistory(){if(!window.confirm("Effacer tout l'historique ?"))return;saveHistory([]);renderHistory();}
+function toggleHist(){document.getElementById('hist-panel').classList.toggle('open');renderHistory();}
+
+// COPY / EXPORT
+function copyTitle(el){const title=el.dataset.title||el.textContent.trim();navigator.clipboard.writeText(title).then(()=>{const o=el.textContent;el.textContent='✓ Copied!';el.style.color='var(--green)';setTimeout(()=>{el.textContent=o;el.style.color='';},1500);});}
+function exportJSON(){if(!lastResult)return;const b=new Blob([JSON.stringify(lastResult,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ari_'+lastResult.productName.replace(/\s+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.json';a.click();}
+function exportCSV(){
+  if(!lastResult?.reports)return;
+  const w=lastResult.reports.weaknesses||[];const tl=lastResult.meta?.themeLabels||{};
+  const lines=['Theme,Frequency %,Severity,Summary,Improvement',...w.map(r=>[tl[r.theme]||r.theme,r.frequency_pct,r.severity,`"${(r.summary||'').replace(/"/g,'""')}"`,`"${(r.improvement||'').replace(/"/g,'""')}"`].join(','))];
+  const b=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ari_weaknesses_'+lastResult.productName.replace(/\s+/g,'_')+'.csv';a.click();
+}
+function exportBrief(){
+  if(!lastResult)return;
+  const r=lastResult.reports||{};const tl=lastResult.meta?.themeLabels||{};
+  const lines=[
+    'ARI — AMAZON REVIEW INTELLIGENCE BRIEF','by Éclozia','═'.repeat(50),
+    `Product: ${lastResult.productName}`,`Opportunity score: ${lastResult.scores?.opportunity}/100`,
+    `Return risk: ${lastResult.scores?.returnRisk}/100`,`Data quality: ${lastResult.scores?.dataQuality}/100`,
+    `Reviews analyzed: ${lastResult.meta?.reviewsAnalyzed}`,`Confidence: ${lastResult.meta?.confidence}`,
+    `Generated: ${new Date().toLocaleDateString()}`,'',
+    r.listingTitle?`AMAZON TITLE SUGGESTION:\n${r.listingTitle}\n`:'',
+    '─'.repeat(50),'TOP WEAKNESSES:',
+    ...(r.weaknesses||[]).map((w,i)=>`  ${i+1}. [Sev ${w.severity}/4 | ${Math.round(w.frequency_pct||0)}%] ${tl[w.theme]||w.theme}\n     ${w.summary}\n     Fix: ${w.improvement||'—'}`),
+    '','─'.repeat(50),'MARKETING BULLETS (Voice Mining):',
+    ...(r.voiceMining?.bullets||[]).map((b,i)=>`  ${i+1}. ${b}`),
+    '','─'.repeat(50),'PRODUCT BRIEF (for supplier/developer):',
+    ...(r.productBrief||[]).map(row=>`  [${row.priority}] ${row.problem}\n     → ${row.requirement}\n     Evidence: ${tl[row.evidence_theme]||row.evidence_theme} (${Math.round(row.frequency_pct||0)}%)`),
+    '','═'.repeat(50),'ARI by Éclozia — Amazon Review Intelligence',`https://kdp-serveur.onrender.com/ari`,
+  ];
+  const b=new Blob([lines.filter(Boolean).join('\n')],{type:'text/plain'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ari_brief_'+lastResult.productName.replace(/\s+/g,'_')+'.txt';a.click();
+}
+
+// INIT
+showState('empty');
+renderHistory();
+</script>
+</body>
+</html>
