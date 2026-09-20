@@ -367,6 +367,8 @@ app.post("/analyse", async (req, res) => {
    ======================================================================= */
 app.use("/eni", eni);
 
+const ari = require("./ari");
+app.use("/ari", ari);
 // Liste des playbooks (pour l'extension)
 app.get("/lof/playbooks", (_req, res) => {
   const out = {};
