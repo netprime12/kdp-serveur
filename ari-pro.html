@@ -460,7 +460,7 @@ function updateParsed(){
 function previewCSV(rows){const el=document.getElementById('csv-preview');el.style.display='block';el.textContent=csvHeaders.join(' | ')+'\n'+rows.map(r=>r.join(' | ')).join('\n');}
 function updateStats(){
   const n=parsedReviews.length;
-  const withT=parsedReviews.filter(r=>(r.text||'').split(' ').length>=15).length;
+  const withT=parsedReviews.filter(r=>(r.text||'').split(' ').length>=5).length;
   const qual=Math.round((withT/Math.max(n,1))*Math.min(n/50,1)*100);
   const bar=document.getElementById('stats-bar');
   if(n===0){bar.classList.remove('open');document.getElementById('btn-go').disabled=true;return;}
@@ -471,8 +471,14 @@ function updateStats(){
   document.getElementById('btn-go').disabled=n<3;
 }
 document.getElementById('paste-area').addEventListener('input',()=>{
-  const lines=document.getElementById('paste-area').value.trim().split(/\r?\n/).filter(l=>l.trim());
-  parsedReviews=lines.map(l=>{const m=l.match(/^([1-5])\s+(.+)/);return m?{text:m[2].trim(),rating:parseInt(m[1]),date:null,asin:null}:{text:l.trim(),rating:null,date:null,asin:null};});
+  const raw=document.getElementById('paste-area').value;
+  const lines=raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+  parsedReviews=lines.map(l=>{
+    const m=l.match(/^([1-5])[\s\.\-\)]+(.+)/);
+    if(m&&m[2].trim().length>2)return{text:m[2].trim(),rating:parseInt(m[1]),date:null,asin:null};
+    if(l.length>5)return{text:l,rating:null,date:null,asin:null};
+    return null;
+  }).filter(Boolean);
   updateStats();
 });
 
@@ -513,7 +519,7 @@ function renderResults(data){
         <div class="meta-chips">
           <span class="meta-chip conf-${meta.confidence}">${t('conf'+meta.confidence.charAt(0).toUpperCase()+meta.confidence.slice(1))}</span>
           <span class="meta-chip">${meta.reviewsAnalyzed.toLocaleString()} reviews</span>
-          <span class="meta-chip">${meta.lang.toUpperCase()}</span>
+          <span class="meta-chip">${(meta.lang||'en').toUpperCase()}</span>
         </div>
       </div>
       <button class="btn-sec" style="width:auto;padding:.4rem .875rem;font-size:12px" onclick="pushToCompare(lastResult)">${t('saveCompare')}</button>
