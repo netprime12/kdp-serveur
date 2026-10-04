@@ -29,6 +29,7 @@ const { generate } = require("./aiprovider");
 const { checkLicense } = require("./license");
 const store = require("./store");
 const lof = require("./lof");
+const eni = require("./eni");
 
 const app = express();
 app.set("trust proxy", true); // Render est derrière un proxy -> vraie IP dans X-Forwarded-For
@@ -119,6 +120,10 @@ in your local history. The public website of each business you choose to analyze
 by our server, and only the findings of that technical audit (HTTPS, mobile, speed, contact form,
 booking, etc.) are sent to the AI provider to draft an explanation. Businesses you import yourself
 (CSV) are processed as you provide them.</li>
+<li><b>Niche analysis (NicheScout)</b>: the keyword you type, your options and any observations
+you enter yourself are sent to our server and then to our AI provider to generate estimates.
+NicheScout does not access Etsy's website, API or data; results are AI-generated estimates.
+NicheScout is not affiliated with, endorsed or certified by Etsy, Inc.</li>
 <li><b>Hashed IP</b>: to prevent free-trial abuse, a one-way hash of your IP address is
 stored as an anti-abuse counter. The IP itself is never stored in clear text.</li>
 </ul>
@@ -138,9 +143,8 @@ stored as an anti-abuse counter. The IP itself is never stored in clear text.</l
 </ul>
 <h2>4. Retention</h2>
 <p>Usage counters (trial, monthly quota, credits) are kept as long as needed to manage
-your access to the service. Analysis content is not stored on our server: it is returned to the
-extension and kept only in your browser (local history of the last 10 analyses, which you can clear
-at any time from the extension).</p>
+your access to the service. Analysis content is not stored on our server: it is returned to your
+browser or extension and kept only there (local history, which you can clear at any time).</p>
 <h2>5. Your rights</h2>
 <p>You can request access to or deletion of your data by writing to:
 <a href="mailto:${email}">${email}</a>.</p>
@@ -174,6 +178,10 @@ Le site public de chaque entreprise que vous choisissez d'analyser est ensuite a
 serveur, et seuls les constats de cet audit technique (HTTPS, mobile, vitesse, formulaire de contact,
 réservation, etc.) sont envoyés au fournisseur d'IA pour rédiger une explication. Les entreprises
 que vous importez vous-même (CSV) sont traitées telles que vous les fournissez.</li>
+<li><b>Analyse de niche (NicheScout)</b> : le mot-clé saisi, vos options et les observations que
+vous entrez vous-même sont envoyés à notre serveur puis à notre fournisseur d'IA pour produire des
+estimations. NicheScout n'accède ni au site, ni à l'API, ni aux données d'Etsy ; les résultats sont
+des estimations générées par IA. NicheScout n'est ni affilié, ni approuvé, ni certifié par Etsy, Inc.</li>
 <li><b>IP hachée</b> : pour éviter l'abus de l'essai gratuit, une empreinte à sens unique de
 votre adresse IP est conservée comme compteur anti-abus. L'IP elle-même n'est jamais
 stockée en clair.</li>
@@ -197,8 +205,8 @@ par notre prestataire (Gumroad).</li>
 <h2>4. Conservation</h2>
 <p>Les compteurs d'usage (essai, quota mensuel, crédits) sont conservés le temps
 nécessaire à la gestion de votre accès au service. Le contenu des analyses n'est pas conservé sur
-notre serveur : il est renvoyé à l'extension et gardé uniquement dans votre navigateur (historique
-local des 10 dernières analyses, que vous pouvez effacer à tout moment depuis l'extension).</p>
+notre serveur : il est renvoyé à votre navigateur ou à l'extension et gardé uniquement là
+(historique local, que vous pouvez effacer à tout moment).</p>
 <h2>5. Vos droits</h2>
 <p>Vous pouvez demander l'accès à vos données ou leur suppression en écrivant à :
 <a href="mailto:${email}">${email}</a>.</p>
@@ -217,7 +225,7 @@ show((navigator.language||'en').slice(0,2).toLowerCase()==='fr'?'fr':'en');
 });
 
 /* Construit un résumé de l'état d'une clé (pour l'extension). */
-async function statusFor(license, deviceId) {
+async function statusFor(license, deviceId, req) {
   const info = await checkLicense(license);
 
   if (info.kind === "error") {
@@ -248,12 +256,17 @@ async function statusFor(license, deviceId) {
   if (info.kind === "invalid") {
     return { active: false, plan: null, restant: 0 };
   }
-  // kind === "none" -> essai gratuit
+  // kind === "none" -> essai gratuit (par appareil ET plafonné par IP)
   const usedTrial = await store.getTrial(deviceId);
   const limitTrial = require("./license").planLimits().trial;
+  let restant = Math.max(0, limitTrial - usedTrial);
+  if (ipGuardOn() && req) {
+    const ipUsed = await store.getIpFree(ipHash(req));
+    restant = Math.min(restant, Math.max(0, ipMax() - ipUsed)); // reflète le blocage IP
+  }
   return {
     active: false, plan: "trial", limit: limitTrial, used: usedTrial,
-    restant: Math.max(0, limitTrial - usedTrial), resetsAt: store.trialResetsAt(),
+    restant, resetsAt: store.trialResetsAt(),
   };
 }
 
@@ -262,7 +275,7 @@ app.post("/verifier-licence", async (req, res) => {
   try {
     const license = (req.body && req.body.license) || "";
     const deviceId = (req.body && req.body.deviceId) || "";
-    res.json(await statusFor(license, deviceId));
+    res.json(await statusFor(license, deviceId, req));
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
@@ -373,9 +386,12 @@ app.post("/analyse", async (req, res) => {
 });
 
 /* =======================================================================
-   LOF — Local Opportunity Finder
+   ENI — Etsy Niche Intelligence (NicheScout)
    ======================================================================= */
+app.use("/eni", eni);
 
+const ari = require("./ari");
+app.use("/ari", ari);
 // Liste des playbooks (pour l'extension)
 app.get("/lof/playbooks", (_req, res) => {
   const out = {};
