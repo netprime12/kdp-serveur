@@ -26,3 +26,13 @@ GARDE-FOU ESSAI GRATUIT PAR IP (déjà activé par défaut) :
 
 Aucune autre variable ne change. Les 3 extensions déjà publiées ne sont pas affectées
 (le garde-fou IP durcit seulement l'essai gratuit ; les licences payantes ne le voient pas).
+
+--- v4 (oct. 2026) — Conformité Google Maps Platform ---
+- Les entreprises issues de Google Places (place_id) ne transmettent PLUS aucun
+  contenu Google à l'IA : seuls les constats de l'audit du site sont envoyés,
+  le nom est remplacé par [ENTREPRISE] (rempli côté extension à l'affichage).
+- Attribution renvoyée : "Google Maps".
+- Politique /confidentialite mise à jour (FR/EN) : contenu Google affiché
+  seulement, ni stocké, ni envoyé à l'IA, ni exporté ; historique local.
+- Aucune nouvelle variable Render. Redéployer ce serveur PUIS publier
+  LocalScout 1.3.0 (les deux vont ensemble).

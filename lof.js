@@ -27,6 +27,13 @@ function playbook(key) {
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
+/* Une entreprise issue de Google Places (place_id présent) : son contenu Google
+   (nom, adresse, note, avis…) peut être AFFICHÉ à l'utilisateur, mais il n'est
+   ni stocké côté serveur ni transmis au fournisseur d'IA (conditions Google
+   Maps Platform). Seul le place_id peut être conservé. */
+const isGoogle = (b) => !!(b && (b.place_id || b.source === "google"));
+const NAME_TOKEN = "[ENTREPRISE]";
+
 /* --- Audit d'un site web (une requête, limitée au domaine fourni) --------- */
 async function auditSite(url) {
   const out = {
@@ -156,7 +163,7 @@ function confidenceInfo(b, a) {
 }
 
 /* --- Liste de preuves lisibles ------------------------------------------- */
-function evidence(b, a, pb) {
+function evidence(b, a, pb, siteOnly) {
   const ev = [];
   if (!a.reachable) ev.push(a.error === "timeout" ? "Site trop lent ou injoignable (timeout)" : (a.error === "no_url" ? "Aucun site web fourni" : "Site web injoignable"));
   else {
@@ -171,6 +178,7 @@ function evidence(b, a, pb) {
     if (pb === "chatbot" && !a.mailto) ev.push("Aucun formulaire/contact clair détecté");
     if (pb === "social" && !a.social) ev.push("Aucun lien vers les réseaux sociaux");
   }
+  if (siteOnly) return ev; // contenu Google (note/avis) jamais transmis à l'IA
   if (b.rating != null && Number(b.rating) < 4.0) ev.push("Note faible : " + b.rating + "/5");
   if (b.reviews != null && Number(b.reviews) < 15) ev.push("Peu d'avis : " + b.reviews);
   return ev;
@@ -184,7 +192,9 @@ function auditAndScoreOne(b, a, pbKey) {
   const raw = 100 * (pb.w.besoin * s.besoin + pb.w.acces * s.acces + pb.w.valeur * s.valeur
     + pb.w.urgence * s.urgence + pb.w.fraicheur * s.fraicheur);
   const score = Math.round(clamp01(raw / 100 * conf.penalty) * 100);
+  const fromGoogle = isGoogle(b);
   return {
+    source: fromGoogle ? "google" : "user",
     name: b.name || "(sans nom)",
     city: b.city || "",
     website: b.website || "",
@@ -204,6 +214,7 @@ function auditAndScoreOne(b, a, pbKey) {
       fraicheur: Math.round(s.fraicheur * 100),
     },
     evidence: evidence(b, a, pbKey),
+    siteEvidence: evidence(b, a, pbKey, true),
     audit: a,
   };
 }
@@ -219,14 +230,20 @@ async function scoreBatch(businesses, pbKey) {
 function buildPrompt(results, pbKey, locale) {
   const pb = playbook(pbKey);
   const lang = (locale || "fr").slice(0, 2).toLowerCase() === "en" ? "English" : "français";
-  const items = results.map((r, i) => ({
-    i,
-    entreprise: r.name,
-    ville: r.city,
-    score: r.score,
-    confiance: r.confidence,
-    problemes_observes: r.evidence,
-  }));
+  const items = results.map((r, i) => r.source === "google"
+    ? { // Contenu Google exclu : uniquement les constats de NOTRE audit du site
+        i,
+        entreprise: NAME_TOKEN,
+        problemes_observes: r.siteEvidence,
+      }
+    : {
+        i,
+        entreprise: r.name,
+        ville: r.city,
+        score: r.score,
+        confiance: r.confidence,
+        problemes_observes: r.evidence,
+      });
   return (
 `Tu es un expert en prospection B2B locale. Service vendu par l'utilisateur : "${pb.label}".
 Pour CHAQUE entreprise ci-dessous, en te basant UNIQUEMENT sur les problèmes observés fournis (n'invente rien, n'ajoute aucun chiffre non fourni), réponds en ${lang}.
@@ -239,6 +256,7 @@ Règles :
 - "recommandation" : 1 phrase d'action précise liée au service "${pb.label}".
 - "message" : un court brouillon d'e-mail de prise de contact (2-4 phrases), poli, personnalisé, citant seulement les problèmes observés, sans promesse chiffrée, prêt à être édité par l'utilisateur. Ne pas inventer le nom d'un interlocuteur.
 - Si aucun problème n'est observé, dis-le honnêtement (faible opportunité) au lieu d'inventer.
+- Si "entreprise" vaut ${NAME_TOKEN}, écris exactement ${NAME_TOKEN} à l'endroit du nom (il sera remplacé chez l'utilisateur) et n'invente aucune autre information sur elle.
 
 Entreprises :
 ${JSON.stringify(items, null, 0)}`
@@ -261,7 +279,7 @@ async function explain(results, pbKey, locale) {
     const ai = byI[i] || {};
     return {
       ...r,
-      problems: Array.isArray(ai.problemes) ? ai.problemes : r.evidence.slice(0, 3),
+      problems: Array.isArray(ai.problemes) ? ai.problemes : (r.source === "google" ? r.siteEvidence : r.evidence).slice(0, 3),
       recommendation: ai.recommandation || "",
       outreach: ai.message || "",
     };
@@ -316,6 +334,7 @@ async function placesSearch({ query, category, city, max, locale, regionCode }) 
     reviews: typeof p.userRatingCount === "number" ? p.userRatingCount : null,
     place_id: p.id || "",
     mapsUri: p.googleMapsUri || "",
+    source: "google",
     status: p.businessStatus || "",
   }));
 }

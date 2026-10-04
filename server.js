@@ -29,7 +29,6 @@ const { generate } = require("./aiprovider");
 const { checkLicense } = require("./license");
 const store = require("./store");
 const lof = require("./lof");
-const eni = require("./eni");
 
 const app = express();
 app.set("trust proxy", true); // Render est derrière un proxy -> vraie IP dans X-Forwarded-For
@@ -113,7 +112,13 @@ page you are viewing (titles, prices, public rankings) and your request are sent
 server and then to our AI provider (Google Gemini or Mistral AI) to generate the analysis.</li>
 <li><b>Business search (LocalScout)</b>: when you run an integrated local search, your query
 (business type, city) is sent to Google Places API to obtain the list of matching public
-businesses; the public website of each business you choose to analyze is then audited.</li>
+businesses. This Google Maps content (name, address, phone, rating, review count) is only
+displayed to you temporarily, with attribution to Google Maps; it is never stored on our server,
+never sent to our AI provider and never included in exports. Only the Google place ID may be kept
+in your local history. The public website of each business you choose to analyze is then audited
+by our server, and only the findings of that technical audit (HTTPS, mobile, speed, contact form,
+booking, etc.) are sent to the AI provider to draft an explanation. Businesses you import yourself
+(CSV) are processed as you provide them.</li>
 <li><b>Hashed IP</b>: to prevent free-trial abuse, a one-way hash of your IP address is
 stored as an anti-abuse counter. The IP itself is never stored in clear text.</li>
 </ul>
@@ -133,7 +138,9 @@ stored as an anti-abuse counter. The IP itself is never stored in clear text.</l
 </ul>
 <h2>4. Retention</h2>
 <p>Usage counters (trial, monthly quota, credits) are kept as long as needed to manage
-your access to the service.</p>
+your access to the service. Analysis content is not stored on our server: it is returned to the
+extension and kept only in your browser (local history of the last 10 analyses, which you can clear
+at any time from the extension).</p>
 <h2>5. Your rights</h2>
 <p>You can request access to or deletion of your data by writing to:
 <a href="mailto:${email}">${email}</a>.</p>
@@ -159,8 +166,14 @@ page Amazon consultée (titres, prix, classements publics) et votre demande sont
 envoyées à notre serveur, puis à notre fournisseur d'IA (Google Gemini ou Mistral AI), afin de générer l'analyse.</li>
 <li><b>Recherche d'entreprises (LocalScout)</b> : lors d'une recherche locale intégrée, votre
 requête (type d'entreprise, ville) est envoyée à l'API Google Places pour obtenir la liste
-des entreprises publiques correspondantes ; le site public de chaque entreprise que vous
-choisissez d'analyser est ensuite audité.</li>
+des entreprises publiques correspondantes. Ce contenu Google Maps (nom, adresse, téléphone, note,
+nombre d'avis) vous est seulement affiché temporairement, avec la mention Google Maps ; il n'est
+jamais stocké sur notre serveur, jamais transmis à notre fournisseur d'IA et jamais inclus dans les
+exports. Seul l'identifiant de lieu Google (place ID) peut être conservé dans votre historique local.
+Le site public de chaque entreprise que vous choisissez d'analyser est ensuite audité par notre
+serveur, et seuls les constats de cet audit technique (HTTPS, mobile, vitesse, formulaire de contact,
+réservation, etc.) sont envoyés au fournisseur d'IA pour rédiger une explication. Les entreprises
+que vous importez vous-même (CSV) sont traitées telles que vous les fournissez.</li>
 <li><b>IP hachée</b> : pour éviter l'abus de l'essai gratuit, une empreinte à sens unique de
 votre adresse IP est conservée comme compteur anti-abus. L'IP elle-même n'est jamais
 stockée en clair.</li>
@@ -183,7 +196,9 @@ par notre prestataire (Gumroad).</li>
 </ul>
 <h2>4. Conservation</h2>
 <p>Les compteurs d'usage (essai, quota mensuel, crédits) sont conservés le temps
-nécessaire à la gestion de votre accès au service.</p>
+nécessaire à la gestion de votre accès au service. Le contenu des analyses n'est pas conservé sur
+notre serveur : il est renvoyé à l'extension et gardé uniquement dans votre navigateur (historique
+local des 10 dernières analyses, que vous pouvez effacer à tout moment depuis l'extension).</p>
 <h2>5. Vos droits</h2>
 <p>Vous pouvez demander l'accès à vos données ou leur suppression en écrivant à :
 <a href="mailto:${email}">${email}</a>.</p>
@@ -202,7 +217,7 @@ show((navigator.language||'en').slice(0,2).toLowerCase()==='fr'?'fr':'en');
 });
 
 /* Construit un résumé de l'état d'une clé (pour l'extension). */
-async function statusFor(license, deviceId, req) {
+async function statusFor(license, deviceId) {
   const info = await checkLicense(license);
 
   if (info.kind === "error") {
@@ -233,17 +248,12 @@ async function statusFor(license, deviceId, req) {
   if (info.kind === "invalid") {
     return { active: false, plan: null, restant: 0 };
   }
-  // kind === "none" -> essai gratuit (par appareil ET plafonné par IP)
+  // kind === "none" -> essai gratuit
   const usedTrial = await store.getTrial(deviceId);
   const limitTrial = require("./license").planLimits().trial;
-  let restant = Math.max(0, limitTrial - usedTrial);
-  if (ipGuardOn() && req) {
-    const ipUsed = await store.getIpFree(ipHash(req));
-    restant = Math.min(restant, Math.max(0, ipMax() - ipUsed)); // reflète le blocage IP
-  }
   return {
     active: false, plan: "trial", limit: limitTrial, used: usedTrial,
-    restant, resetsAt: store.trialResetsAt(),
+    restant: Math.max(0, limitTrial - usedTrial), resetsAt: store.trialResetsAt(),
   };
 }
 
@@ -252,7 +262,7 @@ app.post("/verifier-licence", async (req, res) => {
   try {
     const license = (req.body && req.body.license) || "";
     const deviceId = (req.body && req.body.deviceId) || "";
-    res.json(await statusFor(license, deviceId, req));
+    res.json(await statusFor(license, deviceId));
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
@@ -363,12 +373,9 @@ app.post("/analyse", async (req, res) => {
 });
 
 /* =======================================================================
-   ENI — Etsy Niche Intelligence (NicheScout)
+   LOF — Local Opportunity Finder
    ======================================================================= */
-app.use("/eni", eni);
 
-const ari = require("./ari");
-app.use("/ari", ari);
 // Liste des playbooks (pour l'extension)
 app.get("/lof/playbooks", (_req, res) => {
   const out = {};
@@ -451,7 +458,7 @@ app.post("/lof/search", async (req, res) => {
         query: body.query, category: body.category, city: body.city,
         max, locale: body.locale || "fr", regionCode: body.regionCode,
       });
-      res.json({ ok: true, count: businesses.length, available: av.available, businesses, attribution: "Résultats fournis par Google" });
+      res.json({ ok: true, count: businesses.length, available: av.available, businesses, attribution: "Google Maps" });
     } catch (e) {
       if (e.status === 501)
         return res.status(501).json({ ok: false, error: "places_non_configure",
@@ -520,7 +527,7 @@ app.post("/lof/analyse", async (req, res) => {
       analysed: toProcess,
       skipped: businesses.length - toProcess,
       restant,
-      results: results.map((r) => ({ ...r, audit: undefined })), // audit interne masqué
+      results: results.map((r) => ({ ...r, audit: undefined, siteEvidence: undefined })), // internes masqués
     });
   } catch (e) {
     res.status(e.status || 500).json({ ok: false, error: e.message });
