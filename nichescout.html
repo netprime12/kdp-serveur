@@ -302,7 +302,7 @@ select.si{cursor:pointer}
       <option value="de">🇩🇪 Deutsch</option>
       <option value="pt">🇧🇷 Português</option>
     </select>
-    <span class="quota-badge" id="quota-badge" onclick="openUpgrade()" style="cursor:pointer">Trial — 5 analyses</span>
+    <span class="quota-badge" id="quota-badge" onclick="openUpgrade()" style="cursor:pointer">Trial</span>
     <button class="btn-upgrade" onclick="openUpgrade()">⚡ Upgrade</button>
   </div>
 </div>
@@ -520,6 +520,22 @@ function updateQuota(n){
   el.textContent=n+' analyses';
   el.classList.toggle('depleted',n<=0);
 }
+
+// Au chargement : affiche le VRAI nombre d'analyses d'essai restantes (fourni
+// par le serveur) au lieu d'un chiffre écrit en dur.
+(async function initTrialBadge(){
+  const TRIAL={en:'Free trial',fr:'Essai gratuit',es:'Prueba gratis',de:'Gratis-Test',pt:'Teste grátis'};
+  try{
+    if(document.getElementById('lic-key').value.trim())return;
+    const r=await fetch(SERVER+'/verifier-licence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({license:'',deviceId})});
+    const d=await r.json();
+    if(d&&d.plan==='trial'&&d.restant!=null&&!document.getElementById('lic-key').value.trim()){
+      const el=document.getElementById('quota-badge');
+      el.textContent=(TRIAL[uiLang]||TRIAL.en)+' — '+d.restant+' analyses';
+      el.classList.toggle('depleted',d.restant<=0);
+    }
+  }catch(e){}
+})();
 
 // Loading animation
 let loadInterval=null;
