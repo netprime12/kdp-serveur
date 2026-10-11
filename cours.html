@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parler anglais au centre d'appel — Cours audio interactif | Éclozia</title>
+<meta name="description" content="Le cours interactif pour agents de centre d'appel francophones : plus de 300 phrases à écouter et à répéter, des dialogues réels et des exercices corrigés.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F3F6F8; --card:#FFFFFF; --ink:#13233A; --slate:#5A6B80; --line:#D6DEE6;
+  --cable:#2B5BD7; --cable-soft:#E4EBFB; --lamp:#F2A93B; --lamp-soft:#FFF3DF;
+  --ok:#1F8A5B; --ok-soft:#E1F4EA; --bad:#C2413A; --bad-soft:#FBE6E4;
+  --display:"Bricolage Grotesque", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, sans-serif;
+  --r-sm:6px; --r-md:12px; --r-lg:22px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.55 var(--body)}
+h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0;letter-spacing:-.01em}
+a{color:var(--cable)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--cable);outline-offset:2px;border-radius:4px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.btn{display:inline-flex;align-items:center;gap:.5em;border:0;border-radius:999px;padding:.8em 1.4em;font-weight:700;cursor:pointer;text-decoration:none;transition:transform .15s}
+.btn:active{transform:scale(.97)}
+.btn-main{background:var(--ink);color:#fff}
+.btn-cable{background:var(--cable);color:#fff}
+.btn-ghost{background:transparent;border:2px solid var(--ink);color:var(--ink)}
+.hidden{display:none !important}
+
+/* ---------- Accueil ---------- */
+header.top{padding:18px 0}
+header.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{font-family:var(--display);font-weight:800;font-size:1.15rem;color:var(--ink);text-decoration:none}
+.brand small{font-weight:500;color:var(--slate);font-size:.8em;margin-left:.4em}
+.hero{padding:36px 0 64px}
+.hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+.hero h1{font-size:clamp(2.3rem,5.2vw,4rem);font-weight:800;max-width:12ch}
+.hero p.lead{font-size:1.2rem;color:var(--slate);max-width:34ch;margin:18px 0 28px}
+.hero .actions{display:flex;flex-wrap:wrap;gap:12px}
+.price-note{margin-top:14px;color:var(--slate);font-size:.95rem}
+
+/* carte d'appel en direct : l'élément signature */
+.call{background:var(--ink);color:#fff;border-radius:var(--r-lg);padding:22px 22px 18px;box-shadow:0 30px 60px -30px rgba(19,35,58,.55)}
+.call-head{display:flex;align-items:center;gap:10px;font-size:.92rem;color:#B9C6D8;margin-bottom:14px}
+.lamp{width:11px;height:11px;border-radius:50%;background:var(--lamp);box-shadow:0 0 0 4px rgba(242,169,59,.22)}
+.call-head .timer{margin-left:auto;font-variant-numeric:tabular-nums;color:#fff}
+.call-lines{display:flex;flex-direction:column;gap:12px;min-height:300px}
+.cl{max-width:88%;padding:10px 14px;border-radius:14px;opacity:0;transform:translateY(6px);transition:opacity .4s,transform .4s}
+.cl.show{opacity:1;transform:none}
+.cl .en{font-weight:700;font-size:1.02rem}
+.cl .fr{font-size:.86rem;color:#B9C6D8;margin-top:2px}
+.cl.agent{align-self:flex-end;background:var(--cable);border-bottom-right-radius:4px}
+.cl.agent .fr{color:#D4DFFA}
+.cl.client{align-self:flex-start;background:#22385A;border-bottom-left-radius:4px}
+.cl.speaking{box-shadow:0 0 0 2px var(--lamp)}
+.call-foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:10px}
+.call-foot .who{font-size:.85rem;color:#B9C6D8}
+.call-foot .btn{background:var(--lamp);color:var(--ink);padding:.6em 1.1em}
+
+section.block{padding:64px 0;border-top:1px solid var(--line)}
+section.block h2{font-size:clamp(1.7rem,3.4vw,2.4rem);max-width:22ch;margin-bottom:12px}
+section.block p.sub{color:var(--slate);max-width:60ch;margin:0 0 32px}
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.how h3{font-size:1.2rem;margin:12px 0 6px}
+.how p{margin:0;color:var(--slate)}
+.how .ico{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--cable-soft);color:var(--cable)}
+.syllabus{list-style:none;margin:0;padding:0;columns:2;column-gap:40px}
+.syllabus li{break-inside:avoid;display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+.syllabus .n{font-family:var(--display);font-weight:700;color:var(--cable);min-width:1.6em;font-variant-numeric:tabular-nums}
+.syllabus .free{margin-left:auto;font-size:.8rem;color:var(--ok);font-weight:700;white-space:nowrap}
+.buy{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:28px}
+.panel h3{font-size:1.35rem;margin-bottom:8px}
+.big-price{font-family:var(--display);font-size:3rem;font-weight:800;margin:8px 0}
+.big-price span{font-size:1rem;font-weight:500;color:var(--slate);margin-left:6px}
+.panel ul{padding-left:1.1em;margin:12px 0 22px;color:var(--slate)}
+.field{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.field input{flex:1 1 220px;min-width:0;padding:.8em 1em;border:2px solid var(--line);border-radius:var(--r-sm);font:inherit;background:#fff}
+.field input:focus{border-color:var(--cable);outline:none}
+.msg{margin-top:12px;font-size:.95rem;min-height:1.4em}
+.msg.err{color:var(--bad)} .msg.ok{color:var(--ok)}
+footer{padding:36px 0 48px;color:var(--slate);font-size:.9rem;border-top:1px solid var(--line)}
+
+/* ---------- Cours ---------- */
+.app{display:grid;grid-template-columns:290px 1fr;min-height:100vh}
+.side{background:var(--ink);color:#fff;padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto}
+.side .brand{color:#fff;display:block;padding:0 8px 16px}
+.side .acct{font-size:.82rem;color:#B9C6D8;padding:0 8px 14px}
+.mods{list-style:none;margin:0;padding:0}
+.mods button{width:100%;text-align:left;background:none;border:0;color:#DCE4EF;padding:9px 10px;border-radius:8px;display:flex;gap:10px;align-items:baseline;cursor:pointer;font-size:.95rem}
+.mods button:hover{background:#1E3352}
+.mods button.on{background:var(--cable);color:#fff}
+.mods button[disabled]{color:#6F819B;cursor:not-allowed}
+.mods .n{font-variant-numeric:tabular-nums;min-width:1.5em;color:#8FA3BF}
+.mods button.on .n{color:#fff}
+.mods .bar{display:block;height:3px;background:#2A4268;border-radius:2px;margin-top:5px;overflow:hidden}
+.mods .bar i{display:block;height:100%;background:var(--lamp);width:0}
+.side .tools{border-top:1px solid #2A4268;margin-top:16px;padding:14px 8px 0;font-size:.85rem;color:#B9C6D8}
+.side .tools label{display:block;margin:10px 0 4px}
+.side select,.side input[type=range]{width:100%}
+.side select{padding:6px;border-radius:6px;border:0;font:inherit;font-size:.85rem}
+.side .linkbtn{background:none;border:0;color:#B9C6D8;text-decoration:underline;cursor:pointer;padding:0;margin-top:12px;font-size:.85rem}
+.mtop{display:none}
+main.lesson{padding:34px clamp(18px,4vw,56px) 80px;max-width:900px}
+.lesson h1{font-size:clamp(1.8rem,3.6vw,2.6rem);margin:4px 0 10px}
+.lesson .kicker{color:var(--slate);font-size:.95rem}
+.lesson .intro{color:var(--slate);font-size:1.08rem;max-width:62ch;margin-bottom:26px}
+.lock{background:var(--lamp-soft);border:1px solid #F1D29E;border-radius:var(--r-md);padding:18px 20px;margin-bottom:24px}
+.sec{margin:34px 0}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.sec h2{font-size:1.35rem}
+.sec .note{color:var(--slate);font-size:.95rem;margin:0 0 12px;max-width:64ch}
+.chip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:.4em .9em;font-size:.88rem;font-weight:700;cursor:pointer}
+.chip:hover{border-color:var(--cable)}
+.chip.on{background:var(--lamp);border-color:var(--lamp)}
+.chip.done{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.rows{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden}
+.row{display:grid;grid-template-columns:1fr auto;gap:10px 16px;padding:14px 16px;border-bottom:1px solid var(--line);align-items:center}
+.row:last-child{border-bottom:0}
+.row.speaking{background:var(--lamp-soft)}
+.row .fr{font-size:.92rem;color:var(--slate)}
+.row .en{font-size:1.12rem;font-weight:700;margin-top:2px}
+.row .pr{font-size:.86rem;color:var(--cable);margin-top:2px}
+.row .role{display:inline-block;font-size:.75rem;font-weight:700;padding:.1em .55em;border-radius:4px;margin-right:6px;vertical-align:2px}
+.role.AGENT{background:var(--cable-soft);color:var(--cable)}
+.role.CLIENT{background:#EEF0F3;color:var(--slate)}
+.acts{display:flex;gap:6px}
+.ib{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer}
+.ib:hover{border-color:var(--cable);color:var(--cable)}
+.ib.rec{background:var(--bad);border-color:var(--bad);color:#fff}
+.ib svg{width:18px;height:18px}
+.result{grid-column:1/-1;font-size:.92rem;padding:10px 12px;border-radius:8px}
+.result.good{background:var(--ok-soft)} .result.mid{background:var(--lamp-soft)} .result.low{background:var(--bad-soft)}
+.result .w-miss{text-decoration:underline wavy var(--bad);color:var(--bad)}
+.result .w-ok{color:var(--ok)}
+table.t{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;font-size:.97rem}
+table.t th{text-align:left;background:#EAF0F5;padding:10px 12px;font-size:.88rem}
+table.t td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+table.t td .ib{width:32px;height:32px;display:inline-grid;margin-left:6px;vertical-align:middle}
+.tscroll{overflow-x:auto}
+pre.tpl{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:18px;font:inherit;font-size:.98rem}
+ul.notes{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:16px 16px 16px 36px;margin:0}
+ul.notes li{margin:6px 0}
+.q{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:16px;margin-bottom:12px}
+.q .qt{font-weight:700;margin-bottom:10px}
+.q .choices{display:flex;flex-direction:column;gap:8px}
+.q .choice{text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:8px;padding:10px 12px;cursor:pointer}
+.q .choice.right{border-color:var(--ok);background:var(--ok-soft)}
+.q .choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.q .answer{margin-top:10px;font-size:.93rem}
+.nav-bottom{display:flex;justify-content:space-between;gap:12px;margin-top:44px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;font-size:.95rem;z-index:20;max-width:92vw}
+
+@media (max-width:900px){
+  .hero .wrap,.buy{grid-template-columns:1fr}
+  .how{grid-template-columns:1fr}
+  .syllabus{columns:1}
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;inset:0 auto 0 0;width:min(86vw,320px);z-index:10;transform:translateX(-100%);transition:transform .25s}
+  .side.open{transform:none}
+  .mtop{display:flex;position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;padding:10px 16px;align-items:center;gap:12px}
+  .mtop button{background:none;border:0;color:#fff;font-weight:700;cursor:pointer;padding:6px 0}
+  .mtop span{font-size:.9rem;color:#B9C6D8;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .row{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important}
+  .cl{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= ACCUEIL ================= -->
+<div id="landing">
+  <header class="top"><div class="wrap">
+    <a class="brand" href="#">Éclozia<small>Cours</small></a>
+    <button class="btn btn-ghost" id="topActivate" type="button">J'ai déjà une clé</button>
+  </div></header>
+
+  <section class="hero"><div class="wrap">
+    <div>
+      <h1>Parlez anglais au téléphone sans figer.</h1>
+      <p class="lead">Le cours audio pour agents de centre d'appel francophones : écoutez chaque phrase, répétez-la au micro, et la page vous dit ce qui sonne juste.</p>
+      <div class="actions">
+        <a class="btn btn-main" id="buyBtn" href="#" target="_blank" rel="noopener">Acheter le cours</a>
+        <button class="btn btn-ghost" id="tryBtn" type="button">Essayer 2 modules gratuits</button>
+      </div>
+      <p class="price-note" id="priceNote"></p>
+    </div>
+
+    <figure class="call" aria-label="Exemple d'appel tiré du cours" style="margin:0">
+      <div class="call-head"><span class="lamp" aria-hidden="true"></span> Appel entrant, ligne 2 <span class="timer" id="timer">00:00</span></div>
+      <div class="call-lines" id="callLines"></div>
+      <div class="call-foot">
+        <span class="who">Module 3 — Ouverture d'appel</span>
+        <button class="btn" id="playCall" type="button">Écouter cet appel</button>
+      </div>
+    </figure>
+  </div></section>
+
+  <section class="block"><div class="wrap">
+    <h2>Une méthode pensée pour l'oreille</h2>
+    <p class="sub">Le cours reprend la méthode du livre : on entend le français une fois, l'anglais deux fois, puis on répète.</p>
+    <div class="how">
+      <div><div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10v4h4l5 4V6L7 10H3z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg></div>
+        <h3>Écoutez</h3><p>Chaque phrase anglaise est lue à voix haute, à la vitesse que vous choisissez. Le mode section enchaîne FR → EN → EN tout seul.</p></div>
+      <div><div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
+        <h3>Répétez au micro</h3><p>Dites la phrase : la page compare ce qu'elle a entendu à la phrase attendue et souligne les mots à retravailler.</p></div>
+      <div><div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg></div>
+        <h3>Vérifiez vos acquis</h3><p>Des exercices corrigés automatiquement, et une barre de progression par module pour suivre votre plan de 30 jours.</p></div>
+    </div>
+  </div></section>
+
+  <section class="block"><div class="wrap">
+    <h2>Le programme, de l'accueil à la clôture</h2>
+    <p class="sub">17 modules dans l'ordre d'un vrai appel, plus de 300 phrases et 11 dialogues complets.</p>
+    <ol class="syllabus" id="syllabus"></ol>
+  </div></section>
+
+  <section class="block" id="buySection"><div class="wrap buy">
+    <div class="panel">
+      <h3>Accès complet</h3>
+      <div class="big-price" id="bigPrice"></div>
+      <ul>
+        <li>Les 17 modules et la fiche anti-panique</li>
+        <li>Écoute et répétition au micro sur chaque phrase</li>
+        <li>Accès à vie, sur ordinateur et téléphone</li>
+      </ul>
+      <a class="btn btn-main" id="buyBtn2" href="#" target="_blank" rel="noopener">Acheter sur Gumroad</a>
+    </div>
+    <div class="panel" id="activatePanel">
+      <h3>Activer votre accès</h3>
+      <p style="margin:0;color:var(--slate)">Après l'achat, Gumroad vous envoie une clé de licence par courriel. Collez-la ici.</p>
+      <form class="field" id="activateForm">
+        <label for="keyInput" class="hidden">Clé de licence</label>
+        <input id="keyInput" autocomplete="off" spellcheck="false" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX">
+        <button class="btn btn-cable" type="submit" id="activateBtn">Activer</button>
+      </form>
+      <div class="msg" id="activateMsg" role="status"></div>
+    </div>
+  </div></section>
+
+  <footer><div class="wrap">
+    Éclozia · Questions ou problème d'accès : <a href="mailto:eclozia10@gmail.com">eclozia10@gmail.com</a><br>
+    L'écoute fonctionne dans tous les navigateurs récents. La répétition au micro fonctionne dans Chrome et Edge.
+  </div></footer>
+</div>
+
+<!-- ================= COURS ================= -->
+<div id="app" class="hidden">
+  <div class="mtop"><button type="button" id="menuBtn" aria-expanded="false">☰ Modules</button><span id="mtopTitle"></span></div>
+  <div class="app">
+    <aside class="side" id="side">
+      <a class="brand" href="#" id="homeLink">Parler anglais au centre d'appel</a>
+      <div class="acct" id="acct"></div>
+      <ul class="mods" id="mods"></ul>
+      <div class="tools">
+        <label for="voiceSel">Voix anglaise</label>
+        <select id="voiceSel"></select>
+        <label for="rate">Vitesse : <span id="rateVal">0,9</span></label>
+        <input type="range" id="rate" min="0.6" max="1.2" step="0.05" value="0.9">
+        <button class="linkbtn" type="button" id="resetBtn">Remettre ma progression à zéro</button><br>
+        <button class="linkbtn" type="button" id="logoutBtn">Se déconnecter de cet appareil</button>
+      </div>
+    </aside>
+    <main class="lesson" id="lesson" tabindex="-1"></main>
+  </div>
+</div>
+
+<script>
+/* ================= RÉGLAGES À MODIFIER ================= */
+const CONFIG = {
+  workerUrl: "/cours", // routes du cours sur kdp-serveur
+  gumroadUrl: "__GUMROAD_URL__", // rempli par le serveur (COURS_GUMROAD_URL)
+  price: "__PRIX__", // rempli par le serveur (COURS_PRIX)
+  priceDetail: "paiement unique, en dollars canadiens"
+};
+/* ======================================================= */
+
+const MODULE_TITLES = ["Les bases : épeler, compter, dater","Prononciation pour francophones","Accueil et ouverture d'appel","Vérification d'identité","Comprendre le client","Mise en attente et transfert","Résolution de problèmes et excuses","Facturation et paiements","Support technique","Situations difficiles","Appels sortants et vente","Clôture d'appel","Courriel et clavardage","Vocabulaire technique et indicateurs","Expressions professionnelles et faux amis","Dialogue final : un appel complet","Exercices pratiques","Fiche anti-panique et plan de 30 jours"];
+const FREE = [1,3];
+const HERO_CALL = [
+  ["agent","Hello, thank you for calling TeleService, my name is Marie. How may I help you?","Bonjour, merci d'appeler TeleService, je m'appelle Marie. Comment puis-je vous aider ?"],
+  ["client","Hi, I'd like to speak to someone about my bill.","Bonjour, j'aimerais parler à quelqu'un au sujet de ma facture."],
+  ["agent","Of course, I'd be happy to help you with that today.","Bien sûr, je serai heureuse de vous aider avec ça aujourd'hui."],
+  ["client","My name is John Carter.","Je m'appelle John Carter."]
+];
+
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("ecl_ang_"+k); return v===null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("ecl_ang_"+k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem("ecl_ang_"+k); }catch(e){} }
+};
+function el(tag, attrs, ...kids){
+  const n = document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs||{})){
+    if(k==="class") n.className = v;
+    else if(k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if(v!==false && v!=null) n.setAttribute(k, v===true ? "" : v);
+  }
+  for(const c of kids.flat()){ if(c==null||c===false) continue; n.append(c.nodeType ? c : document.createTextNode(c)); }
+  return n;
+}
+function toast(t){ const n = el("div",{class:"toast",role:"status"},t); document.body.append(n); setTimeout(()=>n.remove(),3200); }
+const ICON = {
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  stop:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>'
+};
+function iconBtn(kind, label, onclick){ const b = el("button",{class:"ib",type:"button","aria-label":label,title:label,onclick}); b.innerHTML = ICON[kind]; return b; }
+
+/* ---------- Synthèse vocale ---------- */
+const tts = {
+  voices: [], token: 0,
+  load(){
+    if(!("speechSynthesis" in window)) return;
+    const all = speechSynthesis.getVoices();
+    this.voices = all;
+    const sel = $("#voiceSel"); if(!sel) return;
+    const en = all.filter(v => v.lang && v.lang.toLowerCase().startsWith("en"));
+    const saved = store.get("voice", "");
+    sel.innerHTML = "";
+    sel.append(el("option",{value:""},"Automatique"));
+    en.forEach(v => sel.append(el("option",{value:v.name, selected: v.name===saved}, v.name+" ("+v.lang+")")));
+  },
+  pick(lang){
+    const L = lang.toLowerCase();
+    if(L.startsWith("en")){
+      const saved = store.get("voice",""); const v = this.voices.find(x=>x.name===saved); if(v) return v;
+      return this.voices.find(x=>/en-(us|ca)/i.test(x.lang) && /google|natural|online/i.test(x.name))
+          || this.voices.find(x=>/en-(us|ca)/i.test(x.lang)) || this.voices.find(x=>/^en/i.test(x.lang));
+    }
+    return this.voices.find(x=>/fr-ca/i.test(x.lang)) || this.voices.find(x=>/^fr/i.test(x.lang));
+  },
+  say(text, lang="en-US"){
+    return new Promise(res=>{
+      if(!("speechSynthesis" in window)){ toast("Votre navigateur ne sait pas lire à voix haute."); return res(false); }
+      const u = new SpeechSynthesisUtterance(text.replace(/\[([^\]]+)\]/g,"$1"));
+      u.lang = lang; const v = this.pick(lang); if(v) u.voice = v;
+      u.rate = lang.startsWith("en") ? Number(store.get("rate",0.9)) : 1;
+      u.onend = ()=>res(true); u.onerror = ()=>res(false);
+      speechSynthesis.speak(u);
+    });
+  },
+  stop(){ this.token++; if("speechSynthesis" in window) speechSynthesis.cancel(); document.querySelectorAll(".speaking").forEach(n=>n.classList.remove("speaking")); }
+};
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+if("speechSynthesis" in window){ speechSynthesis.onvoiceschanged = ()=>tts.load(); }
+
+/* ---------- Reconnaissance vocale et comparaison ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const SMALL = ["zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
+const TENS = ["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+const ORD = {zero:"zeroth",one:"first",two:"second",three:"third",four:"fourth",five:"fifth",six:"sixth",seven:"seventh",eight:"eighth",nine:"ninth",ten:"tenth",eleven:"eleventh",twelve:"twelfth",thirteen:"thirteenth",fourteen:"fourteenth",fifteen:"fifteenth",sixteen:"sixteenth",seventeen:"seventeenth",eighteen:"eighteenth",nineteen:"nineteenth",twenty:"twentieth",thirty:"thirtieth",forty:"fortieth",fifty:"fiftieth",sixty:"sixtieth",seventy:"seventieth",eighty:"eightieth",ninety:"ninetieth"};
+function n2w(n){ if(n<20) return SMALL[n]; if(n<100) return TENS[Math.floor(n/10)]+(n%10?" "+SMALL[n%10]:""); return null; }
+function norm(s){
+  let t = s.toLowerCase().replace(/[’']/g,"'").replace(/\[[^\]]*\]/g," ");
+  t = t.replace(/(\d)[.,](\d)/g,"$1 $2").replace(/[^a-z0-9' ]+/g," ");
+  const out = [];
+  for(const w of t.split(/\s+/).filter(Boolean)){
+    const od = w.match(/^(\d{1,2})(st|nd|rd|th)$/);
+    if(od){ const ws = n2w(+od[1]).split(" "); ws.push(ORD[ws.pop()]); out.push(...ws); continue; }
+    if(/^\d+$/.test(w)){
+      if(w.length<=2 && !(w.length===2 && w[0]==="0")) out.push(...n2w(+w).split(" "));
+      else for(const d of w) out.push(SMALL[+d]);
+    } else out.push(w==="oh"||w==="o" ? "zero" : w);
+  }
+  return out;
+}
+const EXPAND = {"i'm":"i am","i'll":"i will","i've":"i have","i'd":"i would","you're":"you are","you'll":"you will","you've":"you have","you'd":"you would","we're":"we are","we'll":"we will","it's":"it is","that's":"that is","there's":"there is","here's":"here is","what's":"what is","let's":"let us","don't":"do not","doesn't":"does not","didn't":"did not","can't":"cannot","won't":"will not","isn't":"is not","shouldn't":"should not","haven't":"have not","hasn't":"has not","he's":"he is"};
+function words(s){ return norm(s).flatMap(w => (EXPAND[w]||w).split(" ")); }
+function compare(target, said){
+  const a = words(target), b = words(said);
+  const m = a.length, n = b.length, dp = Array.from({length:m+1},()=>new Array(n+1).fill(0));
+  for(let i=m-1;i>=0;i--) for(let j=n-1;j>=0;j--) dp[i][j] = a[i]===b[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j],dp[i][j+1]);
+  const hit = new Array(m).fill(false); let i=0,j=0;
+  while(i<m&&j<n){ if(a[i]===b[j]){hit[i]=true;i++;j++;} else if(dp[i+1][j]>=dp[i][j+1]) i++; else j++; }
+  const lcs = dp[0][0];
+  const score = m ? Math.round(100 * (2*lcs)/(m+n)) : 0;
+  return { score, a, hit };
+}
+function listen(){
+  return new Promise((res,rej)=>{
+    if(!SR){ rej(new Error("nosr")); return; }
+    const r = new SR(); r.lang = "en-US"; r.interimResults = false; r.maxAlternatives = 3;
+    let done = false;
+    r.onresult = e => { done = true; const alts=[...e.results[0]].map(x=>x.transcript); res(alts); };
+    r.onerror = e => { if(!done) rej(new Error(e.error||"err")); };
+    r.onend = () => { if(!done) rej(new Error("no-speech")); };
+    r.start();
+  });
+}
+function srError(err){
+  const c = err && err.message;
+  if(c==="nosr") return "La répétition au micro fonctionne dans Chrome ou Edge. Ouvrez la page dans l'un de ces navigateurs.";
+  if(c==="not-allowed"||c==="service-not-allowed") return "Le micro est bloqué. Autorisez-le dans la barre d'adresse du navigateur, puis réessayez.";
+  if(c==="no-speech") return "Aucune voix entendue. Appuyez sur le micro, puis parlez tout de suite.";
+  if(c==="network") return "La reconnaissance vocale a besoin d'Internet. Vérifiez votre connexion.";
+  return "Le micro n'a pas fonctionné. Réessayez.";
+}
+function renderResult(box, target, alts){
+  const best = alts.map(s=>({s, r:compare(target,s)})).sort((x,y)=>y.r.score-x.r.score)[0];
+  const {score, a, hit} = best.r;
+  const cls = score>=85 ? "good" : score>=60 ? "mid" : "low";
+  const verdict = score>=85 ? "Très bien, c'est clair." : score>=60 ? "Presque : retravaillez les mots soulignés." : "Pas encore : écoutez la phrase, puis réessayez.";
+  box.className = "result "+cls; box.innerHTML = "";
+  box.append(el("strong",{}, score+" % · "+verdict), el("br"),
+    el("span",{},"Entendu : « "+best.s+" »"), el("br"),
+    el("span",{},"Mots attendus : "), ...a.flatMap((w,i)=>[el("span",{class: hit[i]?"w-ok":"w-miss"},w)," "]));
+  return score;
+}
+
+/* ---------- État ---------- */
+let COURSE = null, IS_PREVIEW = true, CURRENT = 1;
+const progress = store.get("progress", {});
+function secKey(mid, si){ return mid+"."+si; }
+function moduleRatio(m){ if(!m) return 0; const n = m.sections.length; const d = m.sections.filter((_,i)=>progress[secKey(m.id,i)]).length; return n ? d/n : 0; }
+
+/* ---------- Accueil ---------- */
+function initLanding(){
+  $("#buyBtn").href = $("#buyBtn2").href = CONFIG.gumroadUrl;
+  $("#priceNote").textContent = CONFIG.price+" · "+CONFIG.priceDetail+" · accès à vie";
+  $("#bigPrice").innerHTML = ""; $("#bigPrice").append(CONFIG.price, el("span",{},CONFIG.priceDetail));
+  const ol = $("#syllabus");
+  MODULE_TITLES.slice(0,17).forEach((t,i)=>ol.append(el("li",{}, el("span",{class:"n"},String(i+1)), el("span",{},t), FREE.includes(i+1)? el("span",{class:"free"},"Gratuit") : null)));
+  $("#tryBtn").onclick = loadPreview;
+  $("#topActivate").onclick = ()=>{ $("#activatePanel").scrollIntoView({behavior:"smooth"}); $("#keyInput").focus({preventScroll:true}); };
+  $("#activateForm").onsubmit = e => { e.preventDefault(); activate($("#keyInput").value.trim(), true); };
+  heroCall();
+}
+let heroTimer = null;
+function heroCall(){
+  const box = $("#callLines"); box.innerHTML = "";
+  const lines = HERO_CALL.map(([who,en,fr]) => { const n = el("div",{class:"cl "+who}, el("div",{class:"en",lang:"en"},en), el("div",{class:"fr"},fr)); box.append(n); return n; });
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  lines.forEach((n,i)=> reduce ? n.classList.add("show") : setTimeout(()=>n.classList.add("show"), 400 + i*900));
+  let s = 0; clearInterval(heroTimer);
+  heroTimer = setInterval(()=>{ s++; $("#timer").textContent = String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }, 1000);
+  let playing = false;
+  $("#playCall").onclick = async ()=>{
+    if(playing){ tts.stop(); playing=false; $("#playCall").textContent="Écouter cet appel"; return; }
+    playing = true; $("#playCall").textContent = "Arrêter"; const tok = ++tts.token;
+    for(let i=0;i<HERO_CALL.length;i++){
+      if(tok!==tts.token) break;
+      lines[i].classList.add("speaking"); await tts.say(HERO_CALL[i][1],"en-US"); lines[i].classList.remove("speaking");
+      await wait(350);
+    }
+    playing = false; $("#playCall").textContent = "Écouter cet appel";
+  };
+}
+
+/* ---------- Serveur ---------- */
+async function api(path, opts){
+  const res = await fetch(CONFIG.workerUrl.replace(/\/$/,"")+path, opts);
+  const data = await res.json().catch(()=>({ok:false,error:"Réponse illisible du serveur."}));
+  return data;
+}
+async function loadPreview(){
+  try{
+    const d = await api("/preview");
+    if(!d.ok) throw new Error(d.error);
+    COURSE = d.course; IS_PREVIEW = true; openApp(1);
+  }catch(e){ toast("L'aperçu ne s'est pas chargé. Vérifiez votre connexion, puis réessayez."); }
+}
+async function activate(key, fromForm){
+  const msg = $("#activateMsg");
+  if(!key){ msg.className="msg err"; msg.textContent="Collez la clé de licence reçue par courriel."; return; }
+  if(fromForm){ msg.className="msg"; msg.textContent="Vérification de la clé…"; $("#activateBtn").disabled = true; }
+  try{
+    const d = await api("/activate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({license_key:key})});
+    if(!d.ok){
+      if(fromForm){ msg.className="msg err"; msg.textContent=d.error||"Clé refusée."; } else { store.del("key"); }
+      return;
+    }
+    store.set("key", key); store.set("email", d.email||"");
+    COURSE = d.course; IS_PREVIEW = false;
+    if(fromForm){ msg.className="msg ok"; msg.textContent="Accès activé."; }
+    openApp(store.get("last",1));
+  }catch(e){
+    if(fromForm){ msg.className="msg err"; msg.textContent="Le serveur ne répond pas. Vérifiez votre connexion, puis réessayez."; }
+  }finally{ $("#activateBtn").disabled = false; }
+}
+
+/* ---------- Cours ---------- */
+function openApp(mid){
+  $("#landing").classList.add("hidden"); $("#app").classList.remove("hidden");
+  clearInterval(heroTimer); tts.stop(); tts.load();
+  $("#acct").textContent = IS_PREVIEW ? "Aperçu gratuit : modules 1 et 3" : "Accès complet"+(store.get("email","") ? " · "+store.get("email","") : "");
+  $("#rate").value = store.get("rate",0.9); $("#rateVal").textContent = String($("#rate").value).replace(".",",");
+  renderMods(); show(mid);
+}
+function getModule(id){ return COURSE.modules.find(m=>m.id===id); }
+function renderMods(){
+  const ul = $("#mods"); ul.innerHTML = "";
+  MODULE_TITLES.forEach((t,i)=>{
+    const id = i+1, m = getModule(id), locked = !m;
+    const bar = el("span",{class:"bar"}, el("i",{style:"width:"+Math.round(moduleRatio(m)*100)+"%"}));
+    const b = el("button",{type:"button",class: id===CURRENT?"on":"", "aria-current": id===CURRENT?"page":false, onclick:()=>show(id)},
+      el("span",{class:"n"},String(id)), el("span",{style:"flex:1"}, t, locked ? " 🔒" : "", bar));
+    ul.append(el("li",{},b));
+  });
+}
+function show(id){
+  tts.stop(); CURRENT = id; store.set("last", id);
+  $("#side").classList.remove("open"); $("#menuBtn").setAttribute("aria-expanded","false");
+  renderMods();
+  const main = $("#lesson"); main.innerHTML = "";
+  $("#mtopTitle").textContent = id+". "+MODULE_TITLES[id-1];
+  const m = getModule(id);
+  main.append(el("div",{class:"kicker"}, id<=17 ? "Module "+id+" sur 17" : "Annexe"), el("h1",{}, MODULE_TITLES[id-1]));
+  if(!m){
+    main.append(el("div",{class:"lock"},
+      el("strong",{},"Ce module fait partie de l'accès complet."), el("p",{style:"margin:6px 0 14px"},"Vous utilisez l'aperçu gratuit. Achetez le cours pour débloquer les 17 modules, puis activez votre clé."),
+      el("a",{class:"btn btn-main",href:CONFIG.gumroadUrl,target:"_blank",rel:"noopener"},"Acheter le cours"), " ",
+      el("button",{class:"btn btn-ghost",type:"button",onclick:backToActivate},"J'ai une clé")));
+  } else {
+    main.append(el("p",{class:"intro"}, m.intro));
+    m.sections.forEach((s,si)=>main.append(renderSection(m,s,si)));
+  }
+  const prev = id>1 ? el("button",{class:"btn btn-ghost",type:"button",onclick:()=>show(id-1)},"Module précédent") : el("span");
+  const next = id<MODULE_TITLES.length ? el("button",{class:"btn btn-main",type:"button",onclick:()=>show(id+1)},"Module suivant") : el("span");
+  main.append(el("div",{class:"nav-bottom"},prev,next));
+  main.focus({preventScroll:true}); window.scrollTo(0,0);
+}
+function backToActivate(){ $("#app").classList.add("hidden"); $("#landing").classList.remove("hidden"); heroCall(); $("#activatePanel").scrollIntoView(); $("#keyInput").focus(); }
+
+function doneChip(m, si){
+  const k = secKey(m.id,si);
+  const b = el("button",{type:"button",class:"chip"+(progress[k]?" done":""),"aria-pressed":progress[k]?"true":"false"}, progress[k] ? "Section terminée" : "Marquer terminée");
+  b.onclick = ()=>{ progress[k] = !progress[k]; store.set("progress",progress); b.className = "chip"+(progress[k]?" done":""); b.textContent = progress[k]?"Section terminée":"Marquer terminée"; b.setAttribute("aria-pressed",String(!!progress[k])); renderMods(); };
+  return b;
+}
+function practiceRow(fr, en, pr, role){
+  const res = el("div",{class:"result hidden",role:"status"});
+  const row = el("div",{class:"row"});
+  const text = el("div",{},
+    el("div",{class:"fr"}, role ? el("span",{class:"role "+role},role==="AGENT"?"Agent":"Client") : null, fr),
+    el("div",{class:"en",lang:"en"}, en),
+    pr ? el("div",{class:"pr"}, pr) : null);
+  const mic = iconBtn("mic","Répéter au micro", async ()=>{
+    tts.stop(); mic.classList.add("rec"); res.classList.remove("hidden"); res.className="result"; res.textContent="Je vous écoute… dites la phrase en anglais.";
+    try{ const alts = await listen(); renderResult(res, en, alts); }
+    catch(err){ res.className="result low"; res.textContent = srError(err); }
+    finally{ mic.classList.remove("rec"); }
+  });
+  row.append(text, el("div",{class:"acts"}, iconBtn("play","Écouter en anglais",()=>{ tts.stop(); row.classList.add("speaking"); tts.say(en).then(()=>row.classList.remove("speaking")); }), mic), res);
+  row._play = async tok => {
+    row.classList.add("speaking"); row.scrollIntoView({block:"nearest",behavior:"smooth"});
+    if(fr && !/^[\d\s.,$@_\/-]+$/.test(fr)) { await tts.say(fr.replace(/^\[|\]$/g,""),"fr-FR"); if(tok!==tts.token) return; await wait(500); }
+    await tts.say(en); if(tok!==tts.token) return; await wait(1800); if(tok!==tts.token) return;
+    await tts.say(en); if(tok!==tts.token) return; await wait(2500);
+    row.classList.remove("speaking");
+  };
+  return row;
+}
+function renderSection(m, s, si){
+  const box = el("section",{class:"sec"});
+  const head = el("div",{class:"sec-head"}, el("h2",{}, s.title));
+  const tools = el("div",{style:"display:flex;gap:8px;flex-wrap:wrap"});
+  head.append(tools); box.append(head);
+  if(s.note) box.append(el("p",{class:"note"}, s.note));
+
+  if(s.type==="phrases" || s.type==="dialogue"){
+    const rows = el("div",{class:"rows"});
+    const list = s.rows.map(r => s.type==="dialogue" ? practiceRow(r[1], r[2], "", r[0]) : practiceRow(r[0], r[1], r[2]||"", null));
+    list.forEach(r=>rows.append(r));
+    const playAll = el("button",{type:"button",class:"chip"},"Écouter la section : FR → EN → EN");
+    playAll.onclick = async ()=>{
+      if(playAll.classList.contains("on")){ tts.stop(); playAll.classList.remove("on"); playAll.textContent="Écouter la section : FR → EN → EN"; return; }
+      tts.stop(); const tok = ++tts.token; playAll.classList.add("on"); playAll.textContent="Arrêter la lecture";
+      for(const r of list){ if(tok!==tts.token) break; await r._play(tok); }
+      if(tok===tts.token){ playAll.classList.remove("on"); playAll.textContent="Écouter la section : FR → EN → EN"; }
+    };
+    tools.append(playAll, doneChip(m,si));
+    box.append(rows);
+  } else if(s.type==="table"){
+    const t = el("table",{class:"t"});
+    t.append(el("thead",{}, el("tr",{}, s.headers.map(h=>el("th",{},h)))));
+    const tb = el("tbody");
+    s.rows.forEach(r=>tb.append(el("tr",{}, r.map((c,ci)=> el("td",{lang: ci===s.en?"en":false}, c, ci===s.en ? iconBtn("play","Écouter",()=>{tts.stop(); tts.say(c);}) : null)))));
+    t.append(tb); box.append(el("div",{class:"tscroll"},t)); tools.append(doneChip(m,si));
+  } else if(s.type==="template"){
+    box.append(el("pre",{class:"tpl",lang:"en"}, s.text));
+    tools.append(el("button",{type:"button",class:"chip",onclick:()=>{tts.stop(); tts.say(s.text);}},"Écouter le modèle"), doneChip(m,si));
+  } else if(s.type==="notes"){
+    box.append(el("ul",{class:"notes"}, s.rows.map(x=>el("li",{},x)))); tools.append(doneChip(m,si));
+  } else if(s.type==="quiz"){
+    s.items.forEach(it=>box.append(renderQuiz(it))); tools.append(doneChip(m,si));
+  }
+  return box;
+}
+function renderQuiz(it){
+  const q = el("div",{class:"q"}, el("div",{class:"qt"}, it.q));
+  if(it.kind==="mcq"){
+    const out = el("div",{class:"answer",role:"status"});
+    const ch = el("div",{class:"choices"});
+    it.choices.forEach((c,i)=>{
+      const b = el("button",{type:"button",class:"choice",lang:"en"}, c);
+      b.onclick = ()=>{ ch.querySelectorAll(".choice").forEach((x,j)=>{ x.classList.toggle("right", j===it.answer); x.classList.toggle("wrong", j===i && i!==it.answer); });
+        out.textContent = (i===it.answer ? "Bonne réponse. " : "Pas tout à fait. ") + (it.explain||""); };
+      ch.append(b);
+    });
+    q.append(ch, out);
+  } else {
+    const input = el("input",{type:"text",lang:"en",autocomplete:"off",spellcheck:"false",placeholder:"Tapez ou dites votre réponse en anglais"});
+    const res = el("div",{class:"result hidden",role:"status"});
+    const check = said => { res.classList.remove("hidden"); renderResult(res, it.a, [said]); res.append(el("br"), el("span",{},"Réponse modèle : "), el("strong",{lang:"en"}, it.a)); };
+    const f = el("form",{class:"field",style:"margin-top:0"}, input,
+      el("button",{class:"btn btn-cable",type:"submit"},"Vérifier"));
+    f.onsubmit = e => { e.preventDefault(); if(!input.value.trim()){ input.focus(); return; } check(input.value); };
+    const mic = iconBtn("mic","Répondre au micro", async ()=>{
+      mic.classList.add("rec");
+      try{ const alts = await listen(); input.value = alts[0]; check(alts[0]); }
+      catch(err){ res.classList.remove("hidden"); res.className="result low"; res.textContent = srError(err); }
+      finally{ mic.classList.remove("rec"); }
+    });
+    f.insertBefore(mic, f.lastChild);
+    q.append(f, el("div",{style:"margin-top:8px"}, el("button",{type:"button",class:"chip",onclick:()=>{tts.stop(); tts.say(it.a);}},"Écouter la réponse modèle")), res);
+  }
+  return q;
+}
+
+/* ---------- Réglages ---------- */
+$("#voiceSel").onchange = e => { store.set("voice", e.target.value); tts.say("Thank you for calling. How may I help you?"); };
+$("#rate").oninput = e => { store.set("rate", Number(e.target.value)); $("#rateVal").textContent = String(e.target.value).replace(".",","); };
+$("#rate").onchange = ()=>{ tts.stop(); tts.say("How may I help you today?"); };
+$("#resetBtn").onclick = ()=>{ if(confirm("Effacer la progression de tous les modules sur cet appareil ?")){ for(const k in progress) delete progress[k]; store.set("progress",progress); show(CURRENT); } };
+$("#logoutBtn").onclick = ()=>{ store.del("key"); store.del("email"); location.reload(); };
+$("#homeLink").onclick = e => { e.preventDefault(); show(1); };
+$("#menuBtn").onclick = ()=>{ const o = $("#side").classList.toggle("open"); $("#menuBtn").setAttribute("aria-expanded", String(o)); };
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ $("#side").classList.remove("open"); tts.stop(); } });
+
+/* ---------- Démarrage ---------- */
+initLanding(); tts.load();
+const savedKey = store.get("key","");
+if(savedKey) activate(savedKey, false);
+</script>
+</body>
+</html>

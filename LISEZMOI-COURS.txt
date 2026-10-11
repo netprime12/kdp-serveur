@@ -1,0 +1,37 @@
+Cours « Parler anglais au centre d'appel » — installation sur kdp-serveur
+==========================================================================
+
+Fichiers ajoutés au dépôt GitHub (aucun secret dedans) :
+  cours.js     routes du cours (/cours, /cours/preview, /cours/activate)
+  cours.html   page de vente + cours
+  server.js    3 lignes ajoutées pour brancher cours.js
+
+Fichier à NE PAS mettre sur GitHub (dépôt public) :
+  cours-content.json  → le contenu payant du cours.
+  À coller dans Render : Environment > Secret Files > Add Secret File
+  Nom du fichier : cours-content.json
+
+Variables d'environnement Render à ajouter :
+  GUMROAD_PRODUCT_COURS = ID du produit Gumroad du cours
+  COURS_GUMROAD_URL     = https://eclozia.gumroad.com/l/... (page de vente)
+  COURS_PRIX            = 12 $
+  COURS_HOST            = parleranglais.geteclozia.com
+
+NE PAS ajouter l'ID du cours à GUMROAD_PRODUCT_IDS : sinon une clé du cours
+donnerait accès aux analyses IA payantes des extensions.
+
+Adresses :
+  https://kdp-serveur.onrender.com/cours          (fonctionne tout de suite)
+  https://parleranglais.geteclozia.com            (après le sous-domaine)
+
+Tests rapides :
+  /cours/preview  → doit afficher {"ok":true,"preview":true,...}
+  Si la réponse dit « contenu du cours n'est pas encore installé » :
+  le fichier secret cours-content.json manque ou porte un autre nom.
+
+Modifier le contenu du cours plus tard :
+  remplacer le texte du fichier secret dans Render, puis Save Changes
+  (Render redéploie automatiquement). Rien à changer sur GitHub.
+
+Les extensions existantes (KDP, MarketScout, ReviewScout, LocalScout, NicheScout)
+ne sont pas touchées : les nouvelles routes sont toutes sous /cours.

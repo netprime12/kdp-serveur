@@ -36,6 +36,11 @@ app.set("trust proxy", true); // Render est derrière un proxy -> vraie IP dans 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
+// Cours « Parler anglais au centre d'appel » (page + licence Gumroad du cours)
+const cours = require("./cours");
+app.use(cours.racineSousDomaine); // sert le cours à la racine de COURS_HOST
+app.use("/cours", cours.router);
+
 const PORT = process.env.PORT || 8787;
 
 /* --- Garde-fou essai gratuit par IP (hachée, jamais stockée en clair) ------
