@@ -230,7 +230,7 @@ ul.notes li{margin:6px 0}
       <ul>
         <li>Les 17 modules et la fiche anti-panique</li>
         <li>Écoute et répétition au micro sur chaque phrase</li>
-        <li>Accès à vie, sur ordinateur et téléphone</li>
+        <li>Accès à vie, sur 3 appareils personnels (ordinateur, téléphone, tablette)</li>
       </ul>
       <a class="btn btn-main" id="buyBtn2" href="#" target="_blank" rel="noopener">Acheter sur Gumroad</a>
     </div>
@@ -247,7 +247,7 @@ ul.notes li{margin:6px 0}
   </div></section>
 
   <footer><div class="wrap">
-    Éclozia · Questions ou problème d'accès : <a href="mailto:eclozia10@gmail.com">eclozia10@gmail.com</a><br>
+    Éclozia · Questions ou problème d'accès : <a href="mailto:contact@geteclozia.com">contact@geteclozia.com</a><br>
     L'écoute fonctionne dans tous les navigateurs récents. La répétition au micro fonctionne dans Chrome et Edge.
   </div></footer>
 </div>
@@ -307,6 +307,11 @@ function el(tag, attrs, ...kids){
   }
   for(const c of kids.flat()){ if(c==null||c===false) continue; n.append(c.nodeType ? c : document.createTextNode(c)); }
   return n;
+}
+function deviceId(){
+  let id = store.get("device","");
+  if(!id){ id = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2)); store.set("device", id); }
+  return id;
 }
 function toast(t){ const n = el("div",{class:"toast",role:"status"},t); document.body.append(n); setTimeout(()=>n.remove(),3200); }
 const ICON = {
@@ -474,9 +479,9 @@ async function activate(key, fromForm){
   if(!key){ msg.className="msg err"; msg.textContent="Collez la clé de licence reçue par courriel."; return; }
   if(fromForm){ msg.className="msg"; msg.textContent="Vérification de la clé…"; $("#activateBtn").disabled = true; }
   try{
-    const d = await api("/activate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({license_key:key})});
+    const d = await api("/activate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({license_key:key, device_id:deviceId()})});
     if(!d.ok){
-      if(fromForm){ msg.className="msg err"; msg.textContent=d.error||"Clé refusée."; } else { store.del("key"); }
+      if(fromForm){ msg.className="msg err"; msg.textContent=d.error||"Clé refusée."; } else { store.del("key"); toast(d.error||"Votre accès doit être réactivé."); }
       return;
     }
     store.set("key", key); store.set("email", d.email||"");

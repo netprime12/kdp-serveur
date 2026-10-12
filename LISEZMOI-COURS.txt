@@ -16,6 +16,17 @@ Variables d'environnement Render à ajouter :
   COURS_GUMROAD_URL     = https://eclozia.gumroad.com/l/... (page de vente)
   COURS_PRIX            = 12 $
   COURS_HOST            = parleranglais.geteclozia.com
+  COURS_MAX_APPAREILS   = 3   (appareils autorisés par clé ; 3 par défaut)
+  COURS_ADMIN_TOKEN     = un mot de passe long de votre choix (page /cours/admin)
+
+Limite d'appareils :
+  Chaque navigateur reçoit un identifiant d'appareil. Une clé fonctionne sur
+  3 appareils au maximum. Pour libérer les places d'un client :
+  https://parleranglais.geteclozia.com/cours/admin
+  → mot de passe admin + clé du client → « Réinitialiser les appareils ».
+  Les appareils sont mémorisés dans Redis Upstash (UPSTASH_REDIS_REST_URL et
+  UPSTASH_REDIS_REST_TOKEN, déjà utilisés par les extensions). Sans Redis, la
+  liste repart à zéro à chaque redéploiement.
 
 NE PAS ajouter l'ID du cours à GUMROAD_PRODUCT_IDS : sinon une clé du cours
 donnerait accès aux analyses IA payantes des extensions.

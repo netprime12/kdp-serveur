@@ -16,6 +16,13 @@
 //   COURS_PRIX             prix affiché, ex. « 12 $ »
 //   COURS_HOST             sous-domaine qui affiche le cours à la racine,
 //                          ex. parleranglais.geteclozia.com
+//   COURS_MAX_APPAREILS    nombre d'appareils autorisés par clé (défaut : 3)
+//   COURS_ADMIN_TOKEN      mot de passe de la page /cours/admin (réinitialiser
+//                          les appareils d'une clé). Sans lui, la page est fermée.
+//   UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN (déjà utilisés par les
+//                          extensions) : mémorisent les appareils de façon
+//                          permanente. Sans eux, la liste repart à zéro à chaque
+//                          redéploiement de Render.
 //
 // Contenu du cours : fichier secret Render « cours-content.json »
 // (lu dans /etc/secrets/, jamais dans le dépôt GitHub public).
@@ -105,6 +112,66 @@ function masquer(email) {
   return d ? u.slice(0, 2) + "•••@" + d : "";
 }
 
+
+// ── Limite d'appareils par clé ─────────────────────────────────
+function maxAppareils() {
+  const n = parseInt(process.env.COURS_MAX_APPAREILS || "3", 10);
+  return Number.isFinite(n) && n > 0 ? n : 3;
+}
+function cleAppareils(cle) {
+  const id = process.env.GUMROAD_PRODUCT_COURS || "";
+  return "cours:appareils:" + crypto.createHash("sha256").update(id + ":" + cle).digest("hex").slice(0, 40);
+}
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL || "";
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || "";
+async function redis(args) {
+  const r = await fetch(REDIS_URL, {
+    method: "POST",
+    headers: { Authorization: "Bearer " + REDIS_TOKEN, "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (d && d.error) throw new Error("Redis: " + d.error);
+  return d ? d.result : null;
+}
+// Secours sans Redis : petit fichier JSON local
+const FICHIER = process.env.COURS_DEVICES_FILE || path.join(__dirname, "cours-appareils.json");
+function lireFichier() { try { return JSON.parse(fs.readFileSync(FICHIER, "utf8")); } catch (_) { return {}; } }
+function ecrireFichier(d) { try { fs.writeFileSync(FICHIER, JSON.stringify(d)); } catch (_) {} }
+
+const appareils = {
+  async liste(k) {
+    if (REDIS_URL && REDIS_TOKEN) return (await redis(["SMEMBERS", k])) || [];
+    return lireFichier()[k] || [];
+  },
+  async ajouter(k, dev) {
+    if (REDIS_URL && REDIS_TOKEN) { await redis(["SADD", k, dev]); return; }
+    const d = lireFichier(); d[k] = [...new Set([...(d[k] || []), dev])]; ecrireFichier(d);
+  },
+  async vider(k) {
+    if (REDIS_URL && REDIS_TOKEN) { await redis(["DEL", k]); return; }
+    const d = lireFichier(); delete d[k]; ecrireFichier(d);
+  },
+};
+
+// Renvoie { ok:true } si l'appareil est connu ou s'il reste une place.
+async function autoriserAppareil(cle, dev) {
+  const k = cleAppareils(cle);
+  try {
+    const deja = await appareils.liste(k);
+    if (deja.includes(dev)) return { ok: true };
+    if (deja.length >= maxAppareils()) {
+      return { ok: false, statut: 403, erreur: "Cette clé est déjà utilisée sur " + maxAppareils() + " appareils, le maximum autorisé. Pour réinitialiser vos appareils, écrivez à contact@geteclozia.com avec le courriel de votre achat." };
+    }
+    await appareils.ajouter(k, dev);
+    return { ok: true };
+  } catch (e) {
+    // Si le stockage est en panne, on ne bloque pas un vrai client.
+    console.error("[cours] appareils :", e.message);
+    return { ok: true };
+  }
+}
+
 // ── Routes ─────────────────────────────────────────────────────
 router.get("/", (_req, res) => envoyerPage(res));
 
@@ -120,10 +187,62 @@ router.post("/activate", async (req, res) => {
   if (!cle || cle.length > 100) return res.status(400).json({ ok: false, error: "Clé de licence manquante ou invalide." });
   const c = contenu();
   if (!c) return res.status(503).json({ ok: false, error: "Le contenu du cours n'est pas encore installé sur le serveur." });
+  const dev = String((req.body && req.body.device_id) || "").trim();
+  if (!/^[A-Za-z0-9-]{8,64}$/.test(dev)) return res.status(400).json({ ok: false, error: "Rechargez la page, puis réessayez." });
   const v = await verifierCle(cle);
   if (!v.ok) return res.status(v.statut).json({ ok: false, error: v.erreur });
+  const a = await autoriserAppareil(cle, dev);
+  if (!a.ok) return res.status(a.statut).json({ ok: false, error: a.erreur });
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, preview: false, email: v.email, course: c });
+});
+
+
+// ── Administration : voir / réinitialiser les appareils d'une clé ──
+function adminOk(req) {
+  const t = process.env.COURS_ADMIN_TOKEN || "";
+  const recu = String((req.body && req.body.token) || "");
+  if (!t || recu.length !== t.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(recu), Buffer.from(t));
+}
+router.get("/admin", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.type("html").send(`<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Admin du cours</title>
+<body style="font:16px/1.5 system-ui;max-width:560px;margin:40px auto;padding:0 16px">
+<h1 style="font-size:1.4rem">Appareils d'une clé</h1>
+<p>Collez la clé de licence du client, puis choisissez une action.</p>
+<form id="f"><p><label>Mot de passe admin<br><input id="t" type="password" style="width:100%;padding:8px" required></label></p>
+<p><label>Clé de licence<br><input id="k" style="width:100%;padding:8px" required></label></p>
+<button name="a" value="voir" style="padding:8px 14px">Voir</button>
+<button name="a" value="vider" style="padding:8px 14px">Réinitialiser les appareils</button></form>
+<p id="r" style="margin-top:16px;font-weight:600"></p>
+<script>
+document.getElementById("f").addEventListener("submit", async e => {
+  e.preventDefault();
+  const action = e.submitter.value;
+  const r = await fetch("/cours/admin/" + action, { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: document.getElementById("t").value, license_key: document.getElementById("k").value.trim() }) });
+  const d = await r.json().catch(() => ({}));
+  document.getElementById("r").textContent = d.message || d.error || "Erreur";
+});
+</script></body></html>`);
+});
+router.post("/admin/:action", async (req, res) => {
+  if (!adminOk(req)) return res.status(403).json({ ok: false, error: "Mot de passe incorrect, ou COURS_ADMIN_TOKEN absent sur Render." });
+  const cle = String((req.body && req.body.license_key) || "").trim();
+  if (!cle) return res.status(400).json({ ok: false, error: "Indiquez la clé de licence." });
+  const k = cleAppareils(cle);
+  try {
+    if (req.params.action === "vider") {
+      await appareils.vider(k);
+      return res.json({ ok: true, message: "C'est fait : le client peut de nouveau activer sa clé sur " + maxAppareils() + " appareils." });
+    }
+    const n = (await appareils.liste(k)).length;
+    return res.json({ ok: true, message: "Cette clé est utilisée sur " + n + " appareil(s) sur " + maxAppareils() + " autorisés." });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: "Stockage indisponible : " + e.message });
+  }
 });
 
 // Sur le sous-domaine du cours, la racine « / » affiche directement le cours
