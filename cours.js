@@ -64,6 +64,8 @@ const COURS = {
     slug: "allemand", base: "/allemand", page: "langue.html", fichier: "allemand-content.json",
     envContenu: "ALLEMAND_CONTENT_PATH", envProduit: "GUMROAD_PRODUCT_ALLEMAND", envUrl: "ALLEMAND_GUMROAD_URL",
     envPrix: "ALLEMAND_PRIX", envHost: "ALLEMAND_HOST", hostDefaut: "parlerallemand.geteclozia.com",
+    // Pas de sous-domaine (limite de 2 domaines sur Render) : adresse officielle sur kdp-serveur.
+    envSite: "ALLEMAND_SITE_URL", siteDefaut: "https://kdp-serveur.onrender.com/allemand/",
     prixDefaut: "12 $", gratuits: [2, 3],
     nom: "Parler allemand",
     titreSeo: "Apprendre l'allemand : cours audio interactif pour francophones | Éclozia",
@@ -72,7 +74,11 @@ const COURS = {
 };
 const env = (k, d) => (process.env[k] || d || "").trim();
 const hostDe = c => env(c.envHost, c.hostDefaut).toLowerCase();
-const urlSite = c => "https://" + hostDe(c) + "/";
+// Adresse publique d'un cours : ALLEMAND_SITE_URL (etc.) si défini, sinon siteDefaut, sinon https://<host>/
+const urlSite = c => {
+  const u = (c.envSite && env(c.envSite)) || c.siteDefaut || "https://" + hostDe(c) + "/";
+  return u.endsWith("/") ? u : u + "/";
+};
 
 // ── Contenu (fichiers secrets) ─────────────────────────────────
 const _contenus = {};
@@ -265,6 +271,10 @@ function creerRouter(c) {
   const router = express.Router();
   router.get("/", (_req, res) => envoyerPage(c, res));
   router.get("/og.png", (_req, res) => envoyerOg(c, res));
+  router.get("/sitemap.xml", (_req, res) => {
+    const jour = new Date().toISOString().slice(0, 10);
+    res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${urlSite(c)}</loc><lastmod>${jour}</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>\n</urlset>\n`);
+  });
 
   router.get("/preview", (_req, res) => {
     const data = contenu(c);
