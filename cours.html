@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Parler anglais au centre d'appel — Cours audio interactif | Éclozia</title>
 <meta name="description" content="Le cours interactif pour agents de centre d'appel francophones : plus de 300 phrases à écouter et à répéter, des dialogues réels et des exercices corrigés.">
+<!--SEO-->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap" rel="stylesheet">
@@ -69,6 +70,11 @@ section.block p.sub{color:var(--slate);max-width:60ch;margin:0 0 32px}
 .how h3{font-size:1.2rem;margin:12px 0 6px}
 .how p{margin:0;color:var(--slate)}
 .how .ico{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--cable-soft);color:var(--cable)}
+.langs{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.langs a{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:18px 20px;text-decoration:none;color:var(--ink);font-weight:700}
+.langs a:hover{border-color:var(--cable)}
+.langs a span{font-weight:400;color:var(--slate);font-size:.92rem;display:block}
+.langs .tag{font-family:var(--display);font-weight:800;color:var(--cable);font-size:1.3rem}
 .syllabus{list-style:none;margin:0;padding:0;columns:2;column-gap:40px}
 .syllabus li{break-inside:avoid;display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
 .syllabus .n{font-family:var(--display);font-weight:700;color:var(--cable);min-width:1.6em;font-variant-numeric:tabular-nums}
@@ -160,6 +166,7 @@ ul.notes li{margin:6px 0}
   .hero .wrap,.buy{grid-template-columns:1fr}
   .how{grid-template-columns:1fr}
   .syllabus{columns:1}
+  .langs{grid-template-columns:1fr}
   .app{grid-template-columns:1fr}
   .side{position:fixed;inset:0 auto 0 0;width:min(86vw,320px);z-index:10;transform:translateX(-100%);transition:transform .25s}
   .side.open{transform:none}
@@ -180,7 +187,8 @@ ul.notes li{margin:6px 0}
 <div id="landing">
   <header class="top"><div class="wrap">
     <a class="brand" href="#">Éclozia<small>Cours</small></a>
-    <button class="btn btn-ghost" id="topActivate" type="button">J'ai déjà une clé</button>
+    <nav style="display:flex;align-items:center;gap:18px;flex-wrap:wrap"><a href="#autresLangues" style="font-weight:700;text-decoration:none">Espagnol · Allemand</a>
+    <button class="btn btn-ghost" id="topActivate" type="button">J'ai déjà une clé</button></nav>
   </div></header>
 
   <section class="hero"><div class="wrap">
@@ -246,8 +254,18 @@ ul.notes li{margin:6px 0}
     </div>
   </div></section>
 
+  <section class="block" id="autresLangues"><div class="wrap">
+    <h2>Apprenez aussi l'espagnol et l'allemand</h2>
+    <p class="sub">Même méthode, mêmes outils : écoute, répétition au micro et exercices corrigés. Des cours complets, de débutant à intermédiaire, pour voyager, travailler et converser.</p>
+    <div class="langs">
+      <a href="__LIEN_ESPAGNOL__"><div>Parler espagnol<span>De débutant à intermédiaire · 2 modules gratuits</span></div><span class="tag">ES</span></a>
+      <a href="__LIEN_ALLEMAND__"><div>Parler allemand<span>De débutant à intermédiaire · 2 modules gratuits</span></div><span class="tag">DE</span></a>
+    </div>
+  </div></section>
+
   <footer><div class="wrap">
-    Éclozia · Questions ou problème d'accès : <a href="mailto:contact@geteclozia.com">contact@geteclozia.com</a><br>
+    Éclozia · Autres cours : <a href="__LIEN_ESPAGNOL__">Parler espagnol</a> · <a href="__LIEN_ALLEMAND__">Parler allemand</a><br>
+    Questions ou problème d'accès : <a href="mailto:contact@geteclozia.com">contact@geteclozia.com</a><br>
     L'écoute fonctionne dans tous les navigateurs récents. La répétition au micro fonctionne dans Chrome et Edge.
   </div></footer>
 </div>

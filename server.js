@@ -40,6 +40,8 @@ app.use(express.json({ limit: "1mb" }));
 const cours = require("./cours");
 app.use(cours.racineSousDomaine); // sert le cours à la racine de COURS_HOST
 app.use("/cours", cours.router);
+app.use("/espagnol", cours.routers.espagnol);
+app.use("/allemand", cours.routers.allemand);
 
 const PORT = process.env.PORT || 8787;
 
